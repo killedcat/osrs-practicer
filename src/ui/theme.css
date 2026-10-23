@@ -1,0 +1,93 @@
+@import '@fontsource/silkscreen/400.css';
+@import '@fontsource/silkscreen/700.css';
+
+:root {
+  --bg: #2b2622;
+  --bg-deep: #1f1b17;
+  --stone: #3e3529;
+  --stone-light: #5c5348;
+  --stone-dark: #221d19;
+  --text: #d6c7a4;
+  --text-muted: #a08c68;
+  --title: #ffff00;
+  --accent: #ff981f;
+  --success: #6fdb6f;
+  --success-dim: #1d4a2b;
+  --error: #ff4040;
+  --error-dim: #401414;
+
+  font-family: 'Silkscreen', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text);
+  background-color: var(--bg);
+  color-scheme: dark;
+}
+
+body {
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+}
+
+.panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(0, 0, 0, 0.22) 100%),
+    var(--stone);
+  border: 2px solid var(--stone-dark);
+  border-top-color: var(--stone-light);
+  border-left-color: var(--stone-light);
+  border-radius: 2px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+    0 3px 8px rgba(0, 0, 0, 0.45);
+}
+
+.btn {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(0, 0, 0, 0.18) 100%),
+    var(--stone);
+  border: 2px solid var(--stone-dark);
+  border-top-color: var(--stone-light);
+  border-left-color: var(--stone-light);
+  border-radius: 2px;
+  color: var(--text);
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.4);
+  transition: filter 100ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.18);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 4px rgba(255, 152, 31, 0.35);
+}
+
+.btn:active:not(:disabled) {
+  border-top-color: var(--stone-dark);
+  border-left-color: var(--stone-dark);
+  border-right-color: var(--stone-light);
+  border-bottom-color: var(--stone-light);
+  box-shadow: inset 2px 2px 2px rgba(0, 0, 0, 0.55);
+  filter: none;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.title {
+  color: var(--title);
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 1px 1px 0 var(--bg-deep);
+}

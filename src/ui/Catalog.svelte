@@ -63,20 +63,20 @@
     padding: 6px 16px;
     font-size: 0.9rem;
     border-radius: 6px;
-    border: 1px solid #44505f;
-    background: #232c36;
-    color: #aab8ca;
+    border: 1px solid var(--stone-dark);
+    background: var(--stone);
+    color: var(--text-muted);
     cursor: pointer;
   }
 
   .history-button:hover {
-    border-color: #8ab4f8;
-    color: #8ab4f8;
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .hint {
     margin: 0;
-    color: #7f92a8;
+    color: var(--text-muted);
   }
 
   .cards {
@@ -97,15 +97,15 @@
     width: 100%;
     padding: 18px 22px;
     text-align: center;
-    border: 1px solid #44505f;
+    border: 1px solid var(--stone-dark);
     border-radius: 8px;
-    background: #1a2129;
-    color: #e8edf3;
+    background: var(--bg-deep);
+    color: var(--text);
     cursor: pointer;
   }
 
   .card:hover {
-    border-color: #8ab4f8;
+    border-color: var(--accent);
   }
 
   .name {
@@ -114,7 +114,7 @@
   }
 
   .description {
-    color: #93a5ba;
+    color: var(--text-muted);
   }
 
   .badges {
@@ -126,17 +126,17 @@
 
   .badge {
     padding: 2px 12px;
-    border: 1px solid #44505f;
+    border: 1px solid var(--stone-dark);
     border-radius: 999px;
-    background: #232c36;
-    color: #aab8ca;
+    background: var(--stone);
+    color: var(--text-muted);
     font-size: 0.8rem;
     font-weight: 600;
     letter-spacing: 0.06em;
   }
 
   .badge.anchored {
-    border-color: #f0b429;
-    color: #f0b429;
+    border-color: var(--accent);
+    color: var(--accent);
   }
 </style>

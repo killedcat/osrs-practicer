@@ -105,10 +105,10 @@
   .hotspot {
     width: 180px;
     height: 128px;
-    border: 2px solid #44505f;
+    border: 2px solid var(--stone-dark);
     border-radius: 8px;
-    background: #1c232c;
-    color: #aab8ca;
+    background: var(--bg-deep);
+    color: var(--text-muted);
     font-size: 1rem;
     cursor: pointer;
     transition:
@@ -119,12 +119,12 @@
   }
 
   .hotspot:focus-visible {
-    outline: 2px solid #8ab4f8;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
   .hotspot:hover:enabled {
-    border-color: #6d8199;
+    border-color: var(--stone-light);
     transform: translateY(-2px);
   }
 
@@ -138,19 +138,19 @@
   }
 
   .hotspot.flash-hit {
-    background: #1d5c29;
-    border-color: #46d16f;
-    color: #d9ffe1;
+    background: var(--success-dim);
+    border-color: var(--success);
+    color: var(--text);
   }
 
   .hotspot.flash-bad {
-    background: #65201f;
-    border-color: #ff6b6b;
-    color: #ffe0dc;
+    background: var(--error-dim);
+    border-color: var(--error);
+    color: var(--text);
   }
 
   .hotspot.clicked {
-    outline: 2px solid #f0b429;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
@@ -160,13 +160,13 @@
     gap: 12px;
     padding: 6px 22px;
     border-radius: 8px;
-    background: #a32626;
-    color: #ffe0dc;
+    background: var(--error);
+    color: var(--text);
     animation: wasted-pulse 600ms ease-in-out infinite alternate;
   }
 
   .wasted-banner.final {
-    background: #5c1c1c;
+    background: var(--error-dim);
     animation: none;
   }
 
@@ -197,7 +197,7 @@
   }
 
   .inventory.clicked {
-    outline: 2px solid #f0b429;
+    outline: 2px solid var(--accent);
     outline-offset: 3px;
   }
 
@@ -217,9 +217,9 @@
   }
 
   .slot.filled {
-    border: 2px solid #44505f;
-    background: #232c36;
-    color: #e8c07a;
+    border: 2px solid var(--stone-dark);
+    background: var(--stone);
+    color: var(--text);
     cursor: pointer;
     padding: 2px;
     transition:
@@ -229,12 +229,12 @@
   }
 
   .slot.filled:focus-visible {
-    outline: 2px solid #8ab4f8;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
   .slot.filled:hover:enabled {
-    border-color: #ff6b6b;
+    border-color: var(--error);
     transform: translateY(-1px);
   }
 
@@ -248,7 +248,7 @@
   }
 
   .slot.empty {
-    border: 2px dashed #2c3540;
+    border: 2px dashed var(--stone-dark);
     background: transparent;
   }
 </style>

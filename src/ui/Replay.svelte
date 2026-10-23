@@ -323,20 +323,20 @@
     padding: 6px 16px;
     font-size: 0.9rem;
     border-radius: 6px;
-    border: 1px solid #44505f;
-    background: #232c36;
-    color: #aab8ca;
+    border: 1px solid var(--stone-dark);
+    background: var(--stone);
+    color: var(--text-muted);
     cursor: pointer;
   }
 
   .back-button:hover {
-    border-color: #8ab4f8;
-    color: #8ab4f8;
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .description {
     margin: 0;
-    color: #93a5ba;
+    color: var(--text-muted);
     max-width: 640px;
   }
 
@@ -355,11 +355,11 @@
   }
 
   .tick-number.playing {
-    color: #46d16f;
+    color: var(--success);
   }
 
   .cycle {
-    color: #7f92a8;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-variant-numeric: tabular-nums;
   }
@@ -367,8 +367,8 @@
   .playing-badge {
     padding: 2px 14px;
     border-radius: 999px;
-    background: #46d16f;
-    color: #10230f;
+    background: var(--success);
+    color: var(--bg-deep);
     font-size: 0.85rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -383,9 +383,9 @@
     padding: 10px 24px;
     font-size: 1rem;
     border-radius: 6px;
-    border: 1px solid #44505f;
-    background: #232c36;
-    color: #e8edf3;
+    border: 1px solid var(--stone-dark);
+    background: var(--stone);
+    color: var(--text);
     cursor: pointer;
   }
 
@@ -408,7 +408,7 @@
   }
 
   .rate-label {
-    color: #7f92a8;
+    color: var(--text-muted);
     font-size: 0.9rem;
   }
 
@@ -421,20 +421,20 @@
     padding: 6px 14px;
     font-size: 0.9rem;
     border-radius: 6px;
-    border: 1px solid #44505f;
-    background: #232c36;
-    color: #e8edf3;
+    border: 1px solid var(--stone-dark);
+    background: var(--stone);
+    color: var(--text);
     cursor: pointer;
   }
 
   .rate-controls button.preset-active {
-    border-color: #8ab4f8;
-    color: #8ab4f8;
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .rate-value {
     min-width: 52px;
-    color: #8ab4f8;
+    color: var(--accent);
     font-size: 0.95rem;
     font-variant-numeric: tabular-nums;
   }
@@ -443,7 +443,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #aab8ca;
+    color: var(--text-muted);
     font-size: 0.95rem;
     cursor: pointer;
   }
@@ -451,13 +451,13 @@
   .metronome input {
     width: 16px;
     height: 16px;
-    accent-color: #8ab4f8;
+    accent-color: var(--accent);
     cursor: pointer;
   }
 
   .scrub {
     width: min(560px, 90vw);
-    accent-color: #8ab4f8;
+    accent-color: var(--accent);
     cursor: pointer;
   }
 
@@ -469,7 +469,7 @@
   }
 
   .timeline-label {
-    color: #7f92a8;
+    color: var(--text-muted);
     font-size: 0.9rem;
   }
 
@@ -486,23 +486,23 @@
     height: 18px;
     padding: 0;
     border-radius: 4px;
-    border: 1px solid #44505f;
-    background: #232c36;
+    border: 1px solid var(--stone-dark);
+    background: var(--stone);
     cursor: pointer;
   }
 
   .cell.hit {
-    background: #1d5c29;
-    border-color: #46d16f;
+    background: var(--success-dim);
+    border-color: var(--success);
   }
 
   .cell.error {
-    background: #65201f;
-    border-color: #ff6b6b;
+    background: var(--error-dim);
+    border-color: var(--error);
   }
 
   .cell.current {
-    outline: 2px solid #8ab4f8;
+    outline: 2px solid var(--accent);
     outline-offset: 1px;
   }
 
@@ -512,9 +512,9 @@
     align-items: center;
     gap: 12px;
     padding: 16px 32px;
-    border: 1px solid #44505f;
+    border: 1px solid var(--stone-dark);
     border-radius: 8px;
-    background: #1a2129;
+    background: var(--bg-deep);
   }
 
   .score-panel h2 {
@@ -536,7 +536,7 @@
 
   .score-item dt {
     font-size: 0.8rem;
-    color: #7f92a8;
+    color: var(--text-muted);
   }
 
   .score-item dd {

@@ -173,29 +173,29 @@
     padding: 6px 16px;
     font-size: 0.9rem;
     border-radius: 6px;
-    border: 1px solid #44505f;
-    background: #232c36;
-    color: #aab8ca;
+    border: 1px solid var(--stone-dark);
+    background: var(--stone);
+    color: var(--text-muted);
     cursor: pointer;
   }
 
   .back-button:hover {
-    border-color: #8ab4f8;
-    color: #8ab4f8;
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .danger {
     padding: 6px 16px;
     font-size: 0.9rem;
     border-radius: 6px;
-    border: 1px solid #65201f;
-    background: #232c36;
-    color: #ff6b6b;
+    border: 1px solid var(--error-dim);
+    background: var(--stone);
+    color: var(--error);
     cursor: pointer;
   }
 
   .danger:hover:not(:disabled) {
-    border-color: #ff6b6b;
+    border-color: var(--error);
   }
 
   .danger:disabled {
@@ -210,7 +210,7 @@
 
   .empty {
     margin: 0;
-    color: #7f92a8;
+    color: var(--text-muted);
   }
 
   .method {
@@ -220,9 +220,9 @@
     gap: 14px;
     width: min(640px, 100%);
     padding: 18px 22px;
-    border: 1px solid #44505f;
+    border: 1px solid var(--stone-dark);
     border-radius: 8px;
-    background: #1a2129;
+    background: var(--bg-deep);
   }
 
   .method-header {
@@ -254,7 +254,7 @@
 
   .stat dt {
     font-size: 0.8rem;
-    color: #7f92a8;
+    color: var(--text-muted);
   }
 
   .stat dd {
@@ -272,7 +272,7 @@
   }
 
   .trend-label {
-    color: #7f92a8;
+    color: var(--text-muted);
     font-size: 0.9rem;
   }
 
@@ -288,27 +288,27 @@
     width: 22px;
     height: 40px;
     padding: 2px;
-    border: 1px solid #44505f;
+    border: 1px solid var(--stone-dark);
     border-radius: 4px;
-    background: #232c36;
+    background: var(--stone);
   }
 
   .trend-bar {
     width: 100%;
     min-height: 0;
     border-radius: 2px;
-    background: #8ab4f8;
+    background: var(--accent);
   }
 
   .trend-bar.good {
-    background: #46d16f;
+    background: var(--success);
   }
 
   .trend-bar.mixed {
-    background: #f0b429;
+    background: var(--accent);
   }
 
   .trend-bar.poor {
-    background: #ff6b6b;
+    background: var(--error);
   }
 </style>
