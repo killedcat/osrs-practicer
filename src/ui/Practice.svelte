@@ -2,6 +2,8 @@
   import { EngineSession, TickClock, judgeRun, inventoryState } from '../engine'
   import type { MethodDefinition, RunLog, RunScore, Verdict, VerdictEvent } from '../engine'
   import { SvelteMap } from 'svelte/reactivity'
+  import { addRun, createHistoryId } from './history'
+  import type { HistoryRecord } from './history'
   import { Metronome } from './metronome'
   import Scene from './Scene.svelte'
 
@@ -53,6 +55,7 @@
   let session: EngineSession | undefined = undefined
   let clock: TickClock | undefined = undefined
   let unsubscribers: Array<() => void> = []
+  let startedAt = 0
   let wastedMissedTick: number | undefined = undefined
   const flashTimers = new SvelteMap<string, ReturnType<typeof setTimeout>>()
   const metronome = new Metronome()
@@ -163,6 +166,7 @@
     inventoryOccupied = 0
     wastedIndicator = undefined
     wastedMissedTick = undefined
+    startedAt = Date.now()
     status = 'running'
     session.start(rate)
     currentTick = 0
@@ -198,6 +202,15 @@
     wastedMissedTick = undefined
     lastRun = log
     score = judgeRun(log, definition).score
+    const historyRecord: HistoryRecord = {
+      id: createHistoryId(),
+      definitionId: definition.id,
+      methodName: definition.name,
+      startedAt,
+      durationTicks: log.durationTicks,
+      score,
+    }
+    addRun(historyRecord)
     status = 'result'
   }
 

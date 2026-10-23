@@ -4,13 +4,19 @@
 
   interface Props {
     onOpen: (definition: MethodDefinition) => void
+    onHistory?: () => void
   }
 
-  let { onOpen }: Props = $props()
+  let { onOpen, onHistory }: Props = $props()
 </script>
 
 <section class="catalog">
-  <h1>Practice methods</h1>
+  <div class="header">
+    <h1>Practice methods</h1>
+    {#if onHistory !== undefined}
+      <button type="button" class="history-button" onclick={onHistory}>History</button>
+    {/if}
+  </div>
   <p class="hint">Pick a method to start a practice run.</p>
   <ul class="cards">
     {#each allDefinitions as definition (definition.id)}
@@ -40,9 +46,32 @@
     gap: 14px;
   }
 
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(640px, 100%);
+  }
+
   .catalog h1 {
     margin: 0;
     font-size: 1.6rem;
+  }
+
+  .history-button {
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    border: 1px solid #44505f;
+    background: #232c36;
+    color: #aab8ca;
+    cursor: pointer;
+  }
+
+  .history-button:hover {
+    border-color: #8ab4f8;
+    color: #8ab4f8;
   }
 
   .hint {
