@@ -217,7 +217,7 @@
 
 <section class="replay">
   {#if onBack !== undefined}
-    <button type="button" class="back-button" onclick={onBack}>Back to practice</button>
+    <button type="button" class="btn back-button" onclick={onBack}>Back to practice</button>
   {/if}
 
   <p class="description">{definition.description}</p>
@@ -365,16 +365,6 @@
     align-self: flex-start;
     padding: 6px 16px;
     font-size: 0.9rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .back-button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
   }
 
   .description {

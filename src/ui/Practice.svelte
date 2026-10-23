@@ -9,7 +9,6 @@
   import {
     errorLineFor,
     flavorLineFor,
-    labelOf,
     pushChat,
     wastedLine,
     type ChatLine,
@@ -147,7 +146,7 @@
   function handleVerdict(event: VerdictEvent): void {
     if (event.verdict === 'hit') {
       if (isAnchored && event.target === primaryTarget) {
-        pushChat(chat, { text: flavorLineFor(labelOf(definition, event.target)), kind: 'good' })
+        pushChat(chat, { text: flavorLineFor(definition, event.target), kind: 'good' })
       }
     } else {
       pushChat(chat, { text: errorLineFor(event, definition), kind: 'bad' })
@@ -274,7 +273,7 @@
 
 <section class="practice">
   {#if onBack !== undefined}
-    <button type="button" class="back-button" onclick={onBack}>Back to catalog</button>
+    <button type="button" class="btn back-button" onclick={onBack}>Back to catalog</button>
   {/if}
 
   <p class="description">{definition.description}</p>
@@ -404,16 +403,6 @@
     align-self: flex-start;
     padding: 6px 16px;
     font-size: 0.9rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .back-button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
   }
 
   .description {

@@ -12,17 +12,17 @@
 
 <section class="catalog">
   <div class="header">
-    <h1>Practice methods</h1>
+    <h1 class="title">Practice methods</h1>
     {#if onHistory !== undefined}
-      <button type="button" class="history-button" onclick={onHistory}>History</button>
+      <button type="button" class="btn history-button" onclick={onHistory}>History</button>
     {/if}
   </div>
   <p class="hint">Pick a method to start a practice run.</p>
   <ul class="cards">
     {#each allDefinitions as definition (definition.id)}
       <li>
-        <button type="button" class="card" onclick={() => onOpen(definition)}>
-          <span class="name">{definition.name}</span>
+        <button type="button" class="card panel" onclick={() => onOpen(definition)}>
+          <span class="name title">{definition.name}</span>
           <span class="description">{definition.description}</span>
           <span class="badges">
             <span class="badge" class:anchored={definition.semantics === 'anchored'}>
@@ -62,16 +62,6 @@
   .history-button {
     padding: 6px 16px;
     font-size: 0.9rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .history-button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
   }
 
   .hint {
@@ -97,20 +87,22 @@
     width: 100%;
     padding: 18px 22px;
     text-align: center;
-    border: 1px solid var(--stone-dark);
-    border-radius: 8px;
-    background: var(--bg-deep);
     color: var(--text);
     cursor: pointer;
+    transition: filter 100ms ease;
   }
 
   .card:hover {
-    border-color: var(--accent);
+    filter: brightness(1.18);
+  }
+
+  .card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .name {
     font-size: 1.15rem;
-    font-weight: 700;
   }
 
   .description {

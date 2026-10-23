@@ -11,6 +11,7 @@ export interface TargetSpec {
   label: string
   placement: TargetPlacement
   icon?: string
+  flavor?: string
 }
 
 export type TargetPlacement =

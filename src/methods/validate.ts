@@ -108,6 +108,12 @@ export function validateDefinition(def: MethodDefinition): ValidationError[] {
           message: `icon "${target.icon}" is not part of the closed icon set (${TARGET_ICONS.join(', ')})`,
         })
       }
+      if (target.flavor !== undefined && !nonEmptyString(target.flavor)) {
+        errors.push({
+          path: `targets[${index}].flavor`,
+          message: 'flavor must be a non-empty string',
+        })
+      }
     })
 
     const viewportCount = placementResults.filter((p) => p.region === 'viewport').length

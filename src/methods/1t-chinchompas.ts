@@ -11,6 +11,7 @@ export const oneTickChinchompas: MethodDefinition = {
     {
       id: 'trap',
       label: 'Box trap',
+      flavor: 'You tend the box trap.',
       icon: 'trap',
       placement: { region: 'viewport', x: 50, y: 50 },
     },

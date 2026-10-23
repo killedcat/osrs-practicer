@@ -22,6 +22,7 @@ describe('3t-granite definition', () => {
       {
         id: 'rock',
         label: 'Granite rock',
+        flavor: 'You swing your pick at the rock.',
         icon: 'rock',
         placement: { region: 'viewport', x: 50, y: 45 },
       },

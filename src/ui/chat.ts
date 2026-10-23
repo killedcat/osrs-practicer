@@ -10,22 +10,14 @@ export interface ChatLine {
 export const CHAT_BUFFER_MAX = 50
 export const REPLAY_CHAT_LINES = 12
 
-const FLAVOR_PATTERNS: Array<{ pattern: RegExp; line: (label: string) => string }> = [
-  { pattern: /\bspot\b/, line: (label) => `You cast out at the ${label}.` },
-  { pattern: /\btrap\b/, line: (label) => `You tend the ${label}.` },
-  { pattern: /\brock\b/, line: (label) => `You swing your pick at the ${label}.` },
-]
-
 export function labelOf(definition: MethodDefinition, targetId: string): string {
   return definition.targets.find((target) => target.id === targetId)?.label ?? targetId
 }
 
-export function flavorLineFor(label: string): string {
-  const lower = label.toLowerCase()
-  for (const flavor of FLAVOR_PATTERNS) {
-    if (flavor.pattern.test(lower)) return flavor.line(lower)
-  }
-  return `You interact with the ${lower}.`
+export function flavorLineFor(definition: MethodDefinition, targetId: string): string {
+  const flavor = definition.targets.find((target) => target.id === targetId)?.flavor
+  if (flavor !== undefined && flavor.trim().length > 0) return flavor
+  return `You interact with the ${labelOf(definition, targetId).toLowerCase()}.`
 }
 
 export function errorLineFor(event: VerdictEvent, definition: MethodDefinition): string {
@@ -85,7 +77,7 @@ export function chatLinesForTick(
     if (event.verdict !== 'hit') {
       lines.push({ text: errorLineFor(event, definition), kind: 'bad' })
     } else if (primaryTarget !== undefined && event.target === primaryTarget) {
-      lines.push({ text: flavorLineFor(labelOf(definition, event.target)), kind: 'good' })
+      lines.push({ text: flavorLineFor(definition, event.target), kind: 'good' })
     }
     if (primaryTarget === undefined || event.target !== primaryTarget) continue
     if (event.verdict === 'missed') {

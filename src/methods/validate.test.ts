@@ -376,6 +376,35 @@ describe('icon validation', () => {
   })
 })
 
+describe('flavor validation', () => {
+  const targetWithFlavor = (flavor: unknown): TargetSpec =>
+    ({
+      id: 'trap',
+      label: 'Trap',
+      flavor,
+      placement: { region: 'viewport', x: 50, y: 50 },
+    }) as unknown as TargetSpec
+
+  it('requires a present flavor to be a non-empty string, and accepts authored or absent flavor', () => {
+    for (const flavor of ['', '   ', 42]) {
+      expect(
+        validateDefinition(overridden({ targets: [targetWithFlavor(flavor)] })),
+      ).toContainEqual(
+        expect.objectContaining({
+          path: 'targets[0].flavor',
+          message: 'flavor must be a non-empty string',
+        }),
+      )
+    }
+    expect(
+      validateDefinition(
+        overridden({ targets: [targetWithFlavor('You tend the box trap.')] }),
+      ),
+    ).toEqual([])
+    expect(validateDefinition(metronomic)).toEqual([])
+  })
+})
+
 describe('assertValidDefinition', () => {
   it('does not throw for a valid definition', () => {
     expect(() => assertValidDefinition(metronomic)).not.toThrow()

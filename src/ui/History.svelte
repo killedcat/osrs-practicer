@@ -61,10 +61,10 @@
 <section class="history">
   <div class="header">
     {#if onBack !== undefined}
-      <button type="button" class="back-button" onclick={onBack}>Back to catalog</button>
+      <button type="button" class="btn back-button" onclick={onBack}>Back to catalog</button>
     {/if}
-    <h1>Run history</h1>
-    <button type="button" class="danger" onclick={clearAll} disabled={!anyRuns}>
+    <h1 class="title">Run history</h1>
+    <button type="button" class="btn danger" onclick={clearAll} disabled={!anyRuns}>
       Clear all history
     </button>
   </div>
@@ -73,10 +73,10 @@
     <p class="empty">No runs recorded yet. Finish a practice run to see your stats here.</p>
   {:else}
     {#each sections as section (section.definition.id)}
-      <article class="method">
+      <article class="method panel">
         <div class="method-header">
-          <h2>{section.definition.name}</h2>
-          <button type="button" class="danger small" onclick={() => clearMethod(section.definition)}>
+          <h2 class="title">{section.definition.name}</h2>
+          <button type="button" class="btn danger small" onclick={() => clearMethod(section.definition)}>
             Clear history
           </button>
         </div>
@@ -172,35 +172,17 @@
   .back-button {
     padding: 6px 16px;
     font-size: 0.9rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .back-button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
   }
 
   .danger {
     padding: 6px 16px;
     font-size: 0.9rem;
-    border-radius: 6px;
-    border: 1px solid var(--error-dim);
-    background: var(--stone);
+    border-color: var(--error-dim);
     color: var(--error);
-    cursor: pointer;
   }
 
   .danger:hover:not(:disabled) {
     border-color: var(--error);
-  }
-
-  .danger:disabled {
-    opacity: 0.45;
-    cursor: default;
   }
 
   .danger.small {
@@ -220,9 +202,6 @@
     gap: 14px;
     width: min(640px, 100%);
     padding: 18px 22px;
-    border: 1px solid var(--stone-dark);
-    border-radius: 8px;
-    background: var(--bg-deep);
   }
 
   .method-header {

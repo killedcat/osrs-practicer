@@ -11,6 +11,7 @@ export const threeTickFishing: MethodDefinition = {
     {
       id: 'spot',
       label: 'Fishing spot',
+      flavor: 'You pull in a catch from the fishing spot.',
       icon: 'water',
       placement: { region: 'viewport', x: 50, y: 42 },
     },
