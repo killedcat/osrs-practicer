@@ -1,25 +1,39 @@
 <script lang="ts">
-  import { getMethod, validateDefinition } from '../methods'
+  import type { MethodDefinition } from '../engine/types'
+  import { validateDefinition } from '../methods'
+  import Catalog from './Catalog.svelte'
   import Practice from './Practice.svelte'
 
-  const definition = getMethod('3t-granite')
-  if (definition === undefined) {
-    throw new Error("method '3t-granite' is not registered in allDefinitions")
+  type View = 'catalog' | 'practice'
+
+  let view = $state<View>('catalog')
+  let selected = $state<MethodDefinition | undefined>(undefined)
+
+  function openMethod(definition: MethodDefinition): void {
+    const errors = validateDefinition(definition)
+    if (errors.length > 0) {
+      const message = `invalid method definition '${definition.id}': ${errors
+        .map((error) => `${error.path}: ${error.message}`)
+        .join('; ')}`
+      if (import.meta.env.DEV) {
+        throw new Error(message)
+      }
+      console.error(message)
+    }
+    selected = definition
+    view = 'practice'
   }
 
-  const errors = validateDefinition(definition)
-  if (errors.length > 0) {
-    const message = `invalid method definition '${definition.id}': ${errors
-      .map((error) => `${error.path}: ${error.message}`)
-      .join('; ')}`
-    if (import.meta.env.DEV) {
-      throw new Error(message)
-    }
-    console.error(message)
+  function returnToCatalog(): void {
+    selected = undefined
+    view = 'catalog'
   }
 </script>
 
 <main>
-  <h1>{definition.name}</h1>
-  <Practice {definition} />
+  {#if view === 'practice' && selected !== undefined}
+    <Practice definition={selected} onBack={returnToCatalog} />
+  {:else}
+    <Catalog onOpen={openMethod} />
+  {/if}
 </main>

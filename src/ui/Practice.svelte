@@ -18,9 +18,10 @@
 
   interface Props {
     definition: MethodDefinition
+    onBack?: () => void
   }
 
-  let { definition }: Props = $props()
+  let { definition, onBack }: Props = $props()
 
   type Status = 'idle' | 'running' | 'paused' | 'result'
 
@@ -222,6 +223,10 @@
 </script>
 
 <section class="practice">
+  {#if onBack !== undefined}
+    <button type="button" class="back-button" onclick={onBack}>Back to catalog</button>
+  {/if}
+
   <p class="description">{definition.description}</p>
 
   <div class="tick-counter" aria-label="Tick counter">
@@ -323,6 +328,22 @@
     flex-direction: column;
     align-items: center;
     gap: 20px;
+  }
+
+  .back-button {
+    align-self: flex-start;
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    border: 1px solid #44505f;
+    background: #232c36;
+    color: #aab8ca;
+    cursor: pointer;
+  }
+
+  .back-button:hover {
+    border-color: #8ab4f8;
+    color: #8ab4f8;
   }
 
   .description {
