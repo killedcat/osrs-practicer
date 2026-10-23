@@ -2,9 +2,9 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #213547;
-  background-color: #f7f0e3;
-  color-scheme: light dark;
+  color: #e8edf3;
+  background-color: #12161c;
+  color-scheme: dark;
 }
 
 body {
@@ -16,6 +16,7 @@ body {
 
 main {
   max-width: 1280px;
+  width: 100%;
   padding: 2rem;
   text-align: center;
   margin: 0 auto;
