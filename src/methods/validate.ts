@@ -1,4 +1,5 @@
 import type { MethodDefinition, TargetPlacement, TargetSpec } from '../engine/types'
+import { TARGET_ICONS } from '../engine/types'
 
 export interface ValidationError {
   path: string
@@ -53,6 +54,8 @@ const placementMessages: Record<NonNullable<PlacementCheck['reason']>, string> =
   slot: 'inventory placement slot must be an integer in [0, 27]',
 }
 
+const isKnownIcon = (icon: string): boolean => (TARGET_ICONS as readonly string[]).includes(icon)
+
 export function validateDefinition(def: MethodDefinition): ValidationError[] {
   const errors: ValidationError[] = []
   const seenTargets = new Set<string>()
@@ -97,6 +100,12 @@ export function validateDefinition(def: MethodDefinition): ValidationError[] {
         errors.push({
           path: placementCheck.path,
           message: placementMessages[placementCheck.reason!],
+        })
+      }
+      if (target.icon !== undefined && !isKnownIcon(target.icon)) {
+        errors.push({
+          path: `targets[${index}].icon`,
+          message: `icon "${target.icon}" is not part of the closed icon set (${TARGET_ICONS.join(', ')})`,
         })
       }
     })

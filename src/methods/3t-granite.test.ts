@@ -19,8 +19,13 @@ describe('3t-granite definition', () => {
     expect(threeTickGranite.semantics).toBe('anchored')
     expect(threeTickGranite.cycleLength).toBe(3)
     expect(threeTickGranite.targets).toEqual([
-      { id: 'rock', label: 'Granite rock', placement: { region: 'viewport', x: 50, y: 45 } },
-      { id: 'granite', label: 'Granite', placement: { region: 'inventory' } },
+      {
+        id: 'rock',
+        label: 'Granite rock',
+        icon: 'rock',
+        placement: { region: 'viewport', x: 50, y: 45 },
+      },
+      { id: 'granite', label: 'Granite', icon: 'bundle', placement: { region: 'inventory' } },
     ])
     expect(threeTickGranite.expectedInputs).toEqual([
       { tickInCycle: 0, target: 'rock', primary: true },

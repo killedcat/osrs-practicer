@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MethodDefinition, TargetSpec } from '../engine/types'
+import { TARGET_ICONS } from '../engine/types'
 import { assertValidDefinition, validateDefinition } from './validate'
 import type { ValidationError } from './validate'
 
@@ -217,10 +218,7 @@ describe('placement validation', () => {
     overridden({ targets: targets as TargetSpec[] })
 
   it('rejects a target with no placement', () => {
-    expectError(
-      withTargets([targetWith(undefined)]),
-      'targets[0].placement',
-    )
+    expectError(withTargets([targetWith(undefined)]), 'targets[0].placement')
     const errors = validateDefinition(withTargets([targetWith(undefined)]))
     expect(errors).toContainEqual(
       expect.objectContaining({
@@ -232,13 +230,19 @@ describe('placement validation', () => {
 
   it('rejects viewport x outside [0, 100]', () => {
     for (const x of [-1, 100.5, 101, '50' as unknown as number]) {
-      expectError(withTargets([targetWith({ region: 'viewport', x, y: 50 })]), 'targets[0].placement.x')
+      expectError(
+        withTargets([targetWith({ region: 'viewport', x, y: 50 })]),
+        'targets[0].placement.x',
+      )
     }
   })
 
   it('rejects viewport y outside [0, 100]', () => {
     for (const y of [-1, 100.5, 101, '42' as unknown as number]) {
-      expectError(withTargets([targetWith({ region: 'viewport', x: 50, y })]), 'targets[0].placement.y')
+      expectError(
+        withTargets([targetWith({ region: 'viewport', x: 50, y })]),
+        'targets[0].placement.y',
+      )
     }
   })
 
@@ -268,13 +272,13 @@ describe('placement validation', () => {
   })
 
   it('requires at least one viewport target', () => {
-    expectError(
-      withTargets([targetWith({ region: 'inventory', slot: 0 })]),
-      'targets',
-    )
+    expectError(withTargets([targetWith({ region: 'inventory', slot: 0 })]), 'targets')
     const errors = validateDefinition(withTargets([targetWith({ region: 'inventory', slot: 0 })]))
     expect(errors).toContainEqual(
-      expect.objectContaining({ path: 'targets', message: 'at least one viewport target is required' }),
+      expect.objectContaining({
+        path: 'targets',
+        message: 'at least one viewport target is required',
+      }),
     )
   })
 
@@ -288,7 +292,8 @@ describe('placement validation', () => {
     expect(errors).toContainEqual(
       expect.objectContaining({
         path: 'targets[1].placement',
-        message: 'inventory target "trap" is judged by an expectedInput and must declare a static slot',
+        message:
+          'inventory target "trap" is judged by an expectedInput and must declare a static slot',
       }),
     )
   })
@@ -313,6 +318,61 @@ describe('placement validation', () => {
         ]),
       ),
     ).toEqual([])
+  })
+})
+
+describe('icon validation', () => {
+  it('rejects an icon outside the closed set', () => {
+    expectError(
+      overridden({
+        targets: [
+          {
+            id: 'trap',
+            label: 'Trap',
+            icon: 'sword',
+            placement: { region: 'viewport', x: 50, y: 50 },
+          },
+        ],
+      }),
+      'targets[0].icon',
+    )
+    const errors = validateDefinition(
+      overridden({
+        targets: [
+          {
+            id: 'trap',
+            label: 'Trap',
+            icon: 'sword',
+            placement: { region: 'viewport', x: 50, y: 50 },
+          },
+        ],
+      }),
+    )
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        path: 'targets[0].icon',
+        message:
+          'icon "sword" is not part of the closed icon set (water, rock, trap, leaf, jar, bundle)',
+      }),
+    )
+  })
+
+  it('accepts every icon in the closed set', () => {
+    for (const icon of TARGET_ICONS) {
+      expect(
+        validateDefinition(
+          overridden({
+            targets: [
+              { id: 'trap', label: 'Trap', icon, placement: { region: 'viewport', x: 50, y: 50 } },
+            ],
+          }),
+        ),
+      ).toEqual([])
+    }
+  })
+
+  it('accepts a target with no icon', () => {
+    expect(validateDefinition(metronomic)).toEqual([])
   })
 })
 

@@ -19,10 +19,20 @@ describe('3t-fishing definition', () => {
     expect(threeTickFishing.semantics).toBe('anchored')
     expect(threeTickFishing.cycleLength).toBe(3)
     expect(threeTickFishing.targets).toEqual([
-      { id: 'spot', label: 'Fishing spot', placement: { region: 'viewport', x: 50, y: 42 } },
-      { id: 'herb', label: 'Clean guam', placement: { region: 'inventory', slot: 0 } },
-      { id: 'tar', label: 'Swamp tar', placement: { region: 'inventory', slot: 1 } },
-      { id: 'fish', label: 'Fish', placement: { region: 'inventory' } },
+      {
+        id: 'spot',
+        label: 'Fishing spot',
+        icon: 'water',
+        placement: { region: 'viewport', x: 50, y: 42 },
+      },
+      {
+        id: 'herb',
+        label: 'Clean guam',
+        icon: 'leaf',
+        placement: { region: 'inventory', slot: 0 },
+      },
+      { id: 'tar', label: 'Swamp tar', icon: 'jar', placement: { region: 'inventory', slot: 1 } },
+      { id: 'fish', label: 'Fish', icon: 'bundle', placement: { region: 'inventory' } },
     ])
     expect(threeTickFishing.expectedInputs).toEqual([
       { tickInCycle: 0, target: 'spot', primary: true },

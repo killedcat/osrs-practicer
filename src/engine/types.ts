@@ -3,15 +3,18 @@ export type TargetId = string
 export type Verdict = 'hit' | 'wrong-tick' | 'wrong-target' | 'missed' | 'extra'
 export type CycleSemantics = 'metronomic' | 'anchored'
 
+export const TARGET_ICONS = ['water', 'rock', 'trap', 'leaf', 'jar', 'bundle'] as const
+export type TargetIconName = (typeof TARGET_ICONS)[number]
+
 export interface TargetSpec {
   id: TargetId
   label: string
   placement: TargetPlacement
+  icon?: string
 }
 
 export type TargetPlacement =
-  | { region: 'viewport'; x: number; y: number }
-  | { region: 'inventory'; slot?: number }
+  { region: 'viewport'; x: number; y: number } | { region: 'inventory'; slot?: number }
 
 export interface ExpectedInput {
   tickInCycle: number
