@@ -142,6 +142,19 @@ describe('TickClock', () => {
     expect(clock.currentTick).toBe(3)
   })
 
+  it('setRate speeds up without skipping ticks', () => {
+    const clock = makeClock(0.5)
+    advanceTime(1200)
+    expect(tickEvents).toEqual([1])
+
+    clock.setRate(1)
+    expect(clock.rate).toBe(1)
+
+    advanceTime(1200)
+    expect(tickEvents).toEqual([1, 2, 3])
+    expect(commitEvents).toEqual([0, 1, 2])
+  })
+
   it('start after start restarts from tick 0 without doubling timers', () => {
     const clock = makeClock(1)
     advanceTime(1800)

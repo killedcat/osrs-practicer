@@ -110,6 +110,25 @@ describe('EngineSession input quantization', () => {
     ])
   })
 
+  it('keeps input quantization continuous across a mid-run rate change', () => {
+    const clock = makeClock()
+    const session = new EngineSession(chinMethod, clock)
+    session.start(1)
+    advance(1200)
+    expect(clock.currentTick).toBe(2)
+
+    clock.setRate(0.5)
+    session.input('chin')
+    advance(1200)
+    session.input('chin')
+
+    const log = session.stop()
+    expect(log.inputs.map((i) => [i.tick, i.target])).toEqual([
+      [2, 'chin'],
+      [3, 'chin'],
+    ])
+  })
+
   it('keeps multiple inputs on the same tick in insertion order', () => {
     const session = new EngineSession(chinMethod, makeClock())
     session.start(1)
