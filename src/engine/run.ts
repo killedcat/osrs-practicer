@@ -80,6 +80,10 @@ export class EngineSession {
     return log
   }
 
+  getLog(): RunLog {
+    return this.snapshot(this.clock.currentTick)
+  }
+
   getScore(): RunScore {
     return judgeRun(this.snapshot(this.clock.currentTick), this.definition).score
   }

@@ -2,9 +2,9 @@
   import { getMethod, validateDefinition } from '../methods'
   import Practice from './Practice.svelte'
 
-  const definition = getMethod('1t-chinchompas')
+  const definition = getMethod('3t-fishing')
   if (definition === undefined) {
-    throw new Error("method '1t-chinchompas' is not registered in allDefinitions")
+    throw new Error("method '3t-fishing' is not registered in allDefinitions")
   }
 
   const errors = validateDefinition(definition)

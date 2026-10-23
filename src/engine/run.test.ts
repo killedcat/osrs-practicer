@@ -251,6 +251,30 @@ describe('EngineSession.getScore', () => {
   })
 })
 
+describe('EngineSession.getLog', () => {
+  it('exposes the live log with every input recorded so far, without touching the run', () => {
+    const clock = makeClock()
+    const session = new EngineSession(chinMethod, clock)
+    session.start(1)
+    session.input('chin')
+    advance(600)
+    session.input('net')
+    const log = session.getLog()
+
+    expect(log.definitionId).toBe('chin-1t')
+    expect(log.inputs.map((i) => [i.tick, i.target])).toEqual([
+      [0, 'chin'],
+      [1, 'net'],
+    ])
+    expect(log.durationTicks).toBe(1)
+
+    expect(clock.isPaused).toBe(false)
+    advance(600)
+    expect(clock.currentTick).toBe(2)
+    expect(session.stop().inputs).toHaveLength(2)
+  })
+})
+
 describe('EngineSession.replay', () => {
   it('reproduces the live judgement for the same inputs', () => {
     const session = new EngineSession(fishingMethod, makeClock())

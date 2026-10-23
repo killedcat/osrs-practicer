@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { EngineSession, TickClock, judgeRun } from '../engine'
+  import { EngineSession, TickClock, judgeRun, inventoryState } from '../engine'
   import type { MethodDefinition, RunLog, RunScore, Verdict, VerdictEvent } from '../engine'
   import { SvelteMap } from 'svelte/reactivity'
   import { Metronome } from './metronome'
@@ -24,20 +24,62 @@
 
   type Status = 'idle' | 'running' | 'paused' | 'result'
 
+  interface WastedIndicator {
+    mode: 'live' | 'final'
+    count: number
+  }
+
   let status = $state<Status>('idle')
   let currentTick = $state(0)
   let cyclePosition = $state(0)
   let rate = $state(1)
   let score = $state<RunScore | undefined>(undefined)
   let flashes = $state<Record<string, Verdict | undefined>>({})
+  let inventoryOccupied = $state(0)
+  let wastedIndicator = $state<WastedIndicator | undefined>(undefined)
 
   let session: EngineSession | undefined = undefined
   let clock: TickClock | undefined = undefined
   let unsubscribers: Array<() => void> = []
+  let wastedMissedTick: number | undefined = undefined
   const flashTimers = new SvelteMap<string, ReturnType<typeof setTimeout>>()
   const metronome = new Metronome()
 
   let metronomeOn = $state(metronome.enabled)
+
+  const primaryTarget = $derived(
+    definition.expectedInputs.find((expected) => expected.primary === true)?.target,
+  )
+  const isAnchored = $derived(definition.semantics === 'anchored')
+
+  function refreshInventory(): void {
+    if (session === undefined) return
+    inventoryOccupied = inventoryState(session.getLog(), definition).occupied
+  }
+
+  function trackWasted(event: VerdictEvent): void {
+    if (!isAnchored || primaryTarget === undefined || event.target !== primaryTarget) return
+    if (event.verdict === 'missed') {
+      wastedMissedTick = event.tick
+      wastedIndicator = { mode: 'live', count: 1 }
+      return
+    }
+    if (wastedIndicator !== undefined && wastedIndicator.mode === 'live') {
+      wastedIndicator = { mode: 'final', count: wastedIndicator.count }
+    }
+  }
+
+  function updateWastedCount(tick: number): void {
+    if (
+      wastedIndicator === undefined ||
+      wastedIndicator.mode !== 'live' ||
+      wastedMissedTick === undefined
+    ) {
+      return
+    }
+    const count = Math.min(Math.max(tick - wastedMissedTick, 0) + 1, definition.cycleLength)
+    wastedIndicator = { mode: 'live', count }
+  }
 
   function showVerdictFlash(event: VerdictEvent): void {
     const pending = flashTimers.get(event.target)
@@ -59,7 +101,10 @@
 
   function onClockTick(tick: number): void {
     currentTick = tick
-    if (session !== undefined) cyclePosition = session.getCyclePosition()
+    if (session !== undefined) {
+      cyclePosition = session.getCyclePosition()
+      refreshInventory()
+    }
   }
 
   function formatRate(value: number): string {
@@ -85,18 +130,27 @@
     if (next) metronome.ensure()
   }
 
+  function handleVerdict(event: VerdictEvent): void {
+    showVerdictFlash(event)
+    trackWasted(event)
+  }
+
   function start(): void {
     if (clock === undefined || session === undefined) {
       clock = new TickClock()
       session = new EngineSession(definition, clock)
-      unsubscribers.push(session.onVerdict(showVerdictFlash))
+      unsubscribers.push(session.onVerdict(handleVerdict))
       unsubscribers.push(clock.onTick(onClockTick))
+      unsubscribers.push(clock.onCommit(updateWastedCount))
       unsubscribers.push(clock.onTick(() => metronome.pulse()))
     }
     if (metronomeOn) metronome.ensure()
     clearFlashTimers()
     flashes = {}
     score = undefined
+    inventoryOccupied = 0
+    wastedIndicator = undefined
+    wastedMissedTick = undefined
     status = 'running'
     session.start(rate)
     currentTick = 0
@@ -128,6 +182,8 @@
     const log: RunLog = session.stop()
     clearFlashTimers()
     flashes = {}
+    wastedIndicator = undefined
+    wastedMissedTick = undefined
     score = judgeRun(log, definition).score
     status = 'result'
   }
@@ -141,7 +197,10 @@
   }
 
   function handleTargetClick(targetId: string): void {
-    if (canClickScene()) session?.input(targetId)
+    if (canClickScene()) {
+      session?.input(targetId)
+      refreshInventory()
+    }
   }
 
   function handleRateInput(event: Event): void {
@@ -173,7 +232,14 @@
     {/if}
   </div>
 
-  <Scene {definition} {flashes} disabled={!canClickScene()} onTarget={handleTargetClick} />
+  <Scene
+    {definition}
+    {flashes}
+    inventoryOccupied={inventoryOccupied}
+    wastedTicks={wastedIndicator}
+    disabled={!canClickScene()}
+    onTarget={handleTargetClick}
+  />
 
   <div class="controls">
     <button type="button" onclick={start} disabled={isLive()}>Start</button>
