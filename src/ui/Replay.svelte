@@ -1,9 +1,18 @@
 <script lang="ts">
-  import { SvelteSet } from 'svelte/reactivity'
   import { TickClock, inventoryState, judgeRun } from '../engine'
   import type { MethodDefinition, RunLog, Verdict } from '../engine'
   import { Metronome } from './metronome'
-  import Scene from './Scene.svelte'
+  import ClientShell from './ClientShell.svelte'
+  import {
+    REPLAY_CHAT_LINES,
+    chatLinesForTick,
+    chatLinesThrough,
+    initialChatStreamState,
+    pushChat,
+    verdictGroups,
+    type ChatLine,
+    type ChatStreamState,
+  } from './chat'
 
   const RATE_PRESETS: Array<{ label: string; rate: number }> = [
     { label: '1x', rate: 1 },
@@ -25,12 +34,16 @@
   let tick = $state(0)
   let playback = $state<Playback>('paused')
   let rate = $state(1)
+  let chat = $state<ChatLine[]>([])
 
   let clock: TickClock | undefined = undefined
   let playBase = 0
   let unsubscribers: Array<() => void> = []
   const metronome = new Metronome()
   let metronomeOn = $state(metronome.enabled)
+
+  let chatState: ChatStreamState = initialChatStreamState()
+  let chatThroughTick = -1
 
   function logThrough(log: RunLog, toTick: number): RunLog {
     return {
@@ -57,37 +70,12 @@
   })
 
   const clickedTargets = $derived.by(() => {
-    const clicked = new SvelteSet<string>()
+    const clicked: Record<string, boolean> = {}
     for (const input of log.inputs) {
-      if (input.tick === tick) clicked.add(input.target)
+      if (input.tick !== tick) continue
+      clicked[input.target] = true
     }
     return clicked
-  })
-
-  const wastedBanner = $derived.by(() => {
-    if (definition.semantics !== 'anchored') return undefined
-    const primary = definition.expectedInputs.find((expected) => expected.primary === true)
-    if (primary === undefined) return undefined
-    const primaryEvents = judgement.verdicts.filter(
-      (event) => event.target === primary.target && event.tick <= tick,
-    )
-    let missedTick: number | undefined = undefined
-    let recoveryTick: number | undefined = undefined
-    for (const event of primaryEvents) {
-      if (event.verdict === 'missed') {
-        missedTick = event.tick
-        recoveryTick = undefined
-        continue
-      }
-      if (missedTick !== undefined && recoveryTick === undefined) recoveryTick = event.tick
-    }
-    if (missedTick === undefined) return undefined
-    const length = Math.max(1, definition.cycleLength)
-    if (recoveryTick === undefined) {
-      const count = Math.min(Math.max(tick - missedTick, 0) + 1, length)
-      return { mode: 'live' as const, count }
-    }
-    return { mode: 'final' as const, count: Math.min(recoveryTick - missedTick, length) }
   })
 
   const timelineCells = $derived.by(() => {
@@ -106,6 +94,34 @@
     return cells
   })
 
+  const chatGroups = $derived(verdictGroups(judgement.verdicts))
+
+  function linesForTick(target: number): ChatLine[] {
+    return chatLinesForTick(chatGroups.get(target) ?? [], definition, chatState)
+  }
+
+  function rebuildChat(to: number): void {
+    chatState = initialChatStreamState()
+    chat = chatLinesThrough(judgement.verdicts, definition, to).slice(-REPLAY_CHAT_LINES)
+    chatThroughTick = to
+  }
+
+  function advanceChatTo(next: number): void {
+    if (next < chatThroughTick) {
+      rebuildChat(next)
+      return
+    }
+    for (let t = chatThroughTick + 1; t <= next; t += 1) {
+      for (const line of linesForTick(t)) pushChat(chat, line)
+    }
+    chatThroughTick = next
+  }
+
+  function seek(next: number): void {
+    tick = Math.min(Math.max(next, 0), lastTick)
+    advanceChatTo(tick)
+  }
+
   function ensureClock(): TickClock {
     if (clock === undefined) {
       const created = new TickClock()
@@ -119,16 +135,16 @@
   function handleClockTick(count: number): void {
     const next = playBase + count
     if (next >= lastTick) {
-      tick = lastTick
+      seek(lastTick)
       pausePlayback()
     } else {
-      tick = next
+      seek(next)
     }
   }
 
   function play(): void {
     if (lastTick === 0) return
-    if (tick >= lastTick) tick = 0
+    if (tick >= lastTick) scrubTo(0)
     const active = ensureClock()
     if (metronomeOn) metronome.ensure()
     playBase = tick
@@ -148,6 +164,7 @@
 
   function scrubTo(next: number): void {
     tick = Math.min(Math.max(next, 0), lastTick)
+    rebuildChat(tick)
     if (playback !== 'playing') return
     if (tick >= lastTick) {
       pausePlayback()
@@ -185,6 +202,8 @@
     return `${Math.round(value * 100) / 100}x`
   }
 
+  rebuildChat(0)
+
   $effect(() => {
     return () => {
       for (const unsubscribe of unsubscribers) unsubscribe()
@@ -203,84 +222,108 @@
 
   <p class="description">{definition.description}</p>
 
-  <div class="tick-counter" aria-label="Replay tick">
-    <span class="tick-number" class:playing={playback === 'playing'}>{tick}</span>
-    <span class="cycle">tick {tick} of {lastTick}</span>
-    {#if playback === 'playing'}
-      <span class="playing-badge">PLAYING</span>
-    {/if}
+  <div class="client-area">
+    <div class="client-frame">
+      <ClientShell
+        {definition}
+        {inventoryOccupied}
+        onTarget={noopTarget}
+        disabled={true}
+        chatMessages={chat}
+        viewportFlashes={flashes}
+        {clickedTargets}
+      />
+    </div>
+
+    <aside class="hud">
+      <div class="tick-hud panel" aria-label="Replay tick">
+        <span class="hud-label">Replay tick</span>
+        <span class="hud-number" class:playing={playback === 'playing'}>{tick}</span>
+        <span class="hud-cycle">tick {tick} of {lastTick}</span>
+        {#if playback === 'playing'}
+          <span class="hud-badge">PLAYING</span>
+        {/if}
+      </div>
+    </aside>
   </div>
 
-  <Scene
-    {definition}
-    {flashes}
-    inventoryOccupied={inventoryOccupied}
-    wastedTicks={wastedBanner}
-    disabled={true}
-    onTarget={noopTarget}
-    clickedTargets={clickedTargets}
-  />
+  <div class="controls-panel panel">
+    <div class="controls">
+      <button type="button" class="btn" onclick={togglePlayback} disabled={lastTick === 0}>
+        {playback === 'playing' ? 'Pause' : 'Play'}
+      </button>
+      <button
+        type="button"
+        class="btn"
+        onclick={() => nudge(-1)}
+        disabled={tick === 0}
+      >
+        Prev tick
+      </button>
+      <button
+        type="button"
+        class="btn"
+        onclick={() => nudge(1)}
+        disabled={tick >= lastTick}
+      >
+        Next tick
+      </button>
+    </div>
 
-  <div class="controls">
-    <button type="button" onclick={togglePlayback} disabled={lastTick === 0}>
-      {playback === 'playing' ? 'Pause' : 'Play'}
-    </button>
-    <button type="button" onclick={() => nudge(-1)} disabled={tick === 0}>Prev tick</button>
-    <button type="button" onclick={() => nudge(1)} disabled={tick >= lastTick}>Next tick</button>
-  </div>
+    <div class="tuning">
+      <div class="rate-controls" role="group" aria-label="Replay rate">
+        <span class="rate-label">Replay rate</span>
+        <div class="rate-presets">
+          {#each RATE_PRESETS as preset (preset.rate)}
+            <button
+              type="button"
+              class="btn"
+              class:preset-active={rate === preset.rate}
+              onclick={() => setRate(preset.rate)}
+            >
+              {preset.label}
+            </button>
+          {/each}
+        </div>
+        <span class="rate-value">{formatRate(rate)}</span>
+      </div>
 
-  <div class="tuning">
-    <div class="rate-controls" role="group" aria-label="Replay rate">
-      <span class="rate-label">Replay rate</span>
-      <div class="rate-presets">
-        {#each RATE_PRESETS as preset (preset.rate)}
+      <label class="metronome">
+        <input type="checkbox" checked={metronomeOn} onchange={toggleMetronome} />
+        Metronome
+      </label>
+    </div>
+
+    <input
+      type="range"
+      class="scrub"
+      min={0}
+      max={lastTick}
+      value={tick}
+      oninput={handleScrub}
+      aria-label="Scrub to tick"
+    />
+
+    <div class="timeline-wrap">
+      <span class="timeline-label">Timeline</span>
+      <div class="timeline" role="group" aria-label="Verdict timeline">
+        {#each timelineCells as cell, index (index)}
           <button
             type="button"
-            class:preset-active={rate === preset.rate}
-            onclick={() => setRate(preset.rate)}
-          >
-            {preset.label}
-          </button>
+            class="cell"
+            class:hit={cell === 'hit'}
+            class:error={cell === 'error'}
+            class:current={index === tick}
+            onclick={() => scrubTo(index)}
+            aria-label="Scrub to tick {index}"
+          ></button>
         {/each}
       </div>
-      <span class="rate-value">{formatRate(rate)}</span>
-    </div>
-
-    <label class="metronome">
-      <input type="checkbox" checked={metronomeOn} onchange={toggleMetronome} />
-      Metronome
-    </label>
-  </div>
-
-  <input
-    type="range"
-    class="scrub"
-    min={0}
-    max={lastTick}
-    value={tick}
-    oninput={handleScrub}
-    aria-label="Scrub to tick"
-  />
-
-  <div class="timeline-wrap">
-    <span class="timeline-label">Timeline</span>
-    <div class="timeline" role="group" aria-label="Verdict timeline">
-      {#each timelineCells as cell, index (index)}
-        <button
-          type="button"
-          class="cell"
-          class:hit={cell === 'hit'}
-          class:error={cell === 'error'}
-          class:current={index === tick}
-          onclick={() => scrubTo(index)}
-          aria-label="Scrub to tick {index}"
-        ></button>
-      {/each}
     </div>
   </div>
 
-  <section class="score-panel">
-    <h2>{scoreTitle}</h2>
+  <section class="score-panel panel">
+    <h2 class="title">{scoreTitle}</h2>
     <dl class="score">
       <div class="score-item">
         <dt>hits</dt>
@@ -315,7 +358,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
   }
 
   .back-button {
@@ -340,38 +383,79 @@
     max-width: 640px;
   }
 
-  .tick-counter {
+  .client-area {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .client-frame {
+    flex: 1 1 340px;
+    min-width: 0;
+  }
+
+  .hud {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 172px;
+  }
+
+  .tick-hud {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
+    padding: 10px 12px;
   }
 
-  .tick-number {
-    font-size: 3.2rem;
+  .hud-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .hud-number {
+    color: var(--title);
+    font-size: 2.6rem;
     font-weight: 700;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
+    text-shadow: 1px 1px 0 var(--bg-deep);
   }
 
-  .tick-number.playing {
+  .hud-number.playing {
     color: var(--success);
   }
 
-  .cycle {
+  .hud-cycle {
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
   }
 
-  .playing-badge {
-    padding: 2px 14px;
+  .hud-badge {
+    padding: 2px 12px;
     border-radius: 999px;
     background: var(--success);
     color: var(--bg-deep);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.08em;
+  }
+
+  .controls-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    width: min(765px, 100%);
+    box-sizing: border-box;
   }
 
   .controls {
@@ -379,19 +463,9 @@
     gap: 12px;
   }
 
-  .controls button {
-    padding: 10px 24px;
-    font-size: 1rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text);
-    cursor: pointer;
-  }
-
-  .controls button:disabled {
-    opacity: 0.45;
-    cursor: default;
+  .controls .btn {
+    padding: 8px 20px;
+    font-size: 0.95rem;
   }
 
   .tuning {
@@ -417,17 +491,12 @@
     gap: 6px;
   }
 
-  .rate-controls button {
-    padding: 6px 14px;
-    font-size: 0.9rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text);
-    cursor: pointer;
+  .rate-presets .btn {
+    padding: 4px 12px;
+    font-size: 0.85rem;
   }
 
-  .rate-controls button.preset-active {
+  .rate-presets .btn.preset-active {
     border-color: var(--accent);
     color: var(--accent);
   }
@@ -457,6 +526,7 @@
 
   .scrub {
     width: min(560px, 90vw);
+    min-height: 18px;
     accent-color: var(--accent);
     cursor: pointer;
   }
@@ -512,9 +582,7 @@
     align-items: center;
     gap: 12px;
     padding: 16px 32px;
-    border: 1px solid var(--stone-dark);
-    border-radius: 8px;
-    background: var(--bg-deep);
+    max-width: min(720px, 100%);
   }
 
   .score-panel h2 {

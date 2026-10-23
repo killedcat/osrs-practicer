@@ -105,7 +105,8 @@
   $effect(() => {
     const el = chatEl
     if (el === undefined) return
-    if (chatMessages.length === 0) {
+    const newest = chatMessages[chatMessages.length - 1]?.text
+    if (newest === undefined) {
       el.scrollTop = 0
       return
     }

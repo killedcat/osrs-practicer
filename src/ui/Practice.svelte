@@ -6,6 +6,14 @@
   import type { HistoryRecord } from './history'
   import { Metronome } from './metronome'
   import ClientShell from './ClientShell.svelte'
+  import {
+    errorLineFor,
+    flavorLineFor,
+    labelOf,
+    pushChat,
+    wastedLine,
+    type ChatLine,
+  } from './chat'
 
   const CLICK_MS = 250
 
@@ -17,19 +25,6 @@
   const RATE_SLIDER_MIN = 0.1
   const RATE_SLIDER_MAX = 1
   const RATE_SLIDER_STEP = 0.05
-
-  const CHAT_BUFFER_MAX = 50
-
-  interface ChatLine {
-    text: string
-    kind: 'info' | 'good' | 'bad'
-  }
-
-  const FLAVOR_PATTERNS: Array<{ pattern: RegExp; line: (label: string) => string }> = [
-    { pattern: /\bspot\b/, line: (label) => `You cast out at the ${label}.` },
-    { pattern: /\btrap\b/, line: (label) => `You tend the ${label}.` },
-    { pattern: /\brock\b/, line: (label) => `You swing your pick at the ${label}.` },
-  ]
 
   interface Props {
     definition: MethodDefinition
@@ -86,38 +81,6 @@
     inventoryOccupied = inventoryState(session.getLog(), definition).occupied
   }
 
-  function labelOf(targetId: string): string {
-    return definition.targets.find((target) => target.id === targetId)?.label ?? targetId
-  }
-
-  function flavorLineFor(label: string): string {
-    const lower = label.toLowerCase()
-    for (const flavor of FLAVOR_PATTERNS) {
-      if (flavor.pattern.test(lower)) return flavor.line(lower)
-    }
-    return `You interact with the ${lower}.`
-  }
-
-  function errorLineFor(event: VerdictEvent): string {
-    const label = labelOf(event.target).toLowerCase()
-    const tick = `(tick ${event.tick})`
-    switch (event.verdict) {
-      case 'missed':
-        return `Missed: ${label} ${tick}`
-      case 'wrong-tick':
-        return `Wrong tick: ${label} ${tick}`
-      case 'wrong-target':
-        return `Wrong target: ${label} ${tick}`
-      default:
-        return `Extra click ${tick}`
-    }
-  }
-
-  function pushChat(line: ChatLine): void {
-    chat.push(line)
-    if (chat.length > CHAT_BUFFER_MAX) chat.splice(0, chat.length - CHAT_BUFFER_MAX)
-  }
-
   function trackWasted(event: VerdictEvent): void {
     if (!isAnchored || primaryTarget === undefined || event.target !== primaryTarget) return
     if (event.verdict === 'missed') {
@@ -128,10 +91,7 @@
     if (wastedIndicator !== undefined && wastedIndicator.mode === 'live') {
       const count = wastedIndicator.count
       wastedIndicator = { mode: 'final', count }
-      pushChat({
-        text: `Wasted ${count} tick${count === 1 ? '' : 's'}.`,
-        kind: 'bad',
-      })
+      pushChat(chat, { text: wastedLine(count), kind: 'bad' })
     }
   }
 
@@ -187,10 +147,10 @@
   function handleVerdict(event: VerdictEvent): void {
     if (event.verdict === 'hit') {
       if (isAnchored && event.target === primaryTarget) {
-        pushChat({ text: flavorLineFor(labelOf(event.target)), kind: 'good' })
+        pushChat(chat, { text: flavorLineFor(labelOf(definition, event.target)), kind: 'good' })
       }
     } else {
-      pushChat({ text: errorLineFor(event), kind: 'bad' })
+      pushChat(chat, { text: errorLineFor(event, definition), kind: 'bad' })
     }
     trackWasted(event)
   }
@@ -208,7 +168,7 @@
     clearClickedTimers()
     clickedTargets = {}
     chat = []
-    pushChat({ text: `You begin practicing ${definition.name}.`, kind: 'info' })
+    pushChat(chat, { text: `You begin practicing ${definition.name}.`, kind: 'info' })
     score = undefined
     inventoryOccupied = 0
     wastedIndicator = undefined
@@ -258,7 +218,7 @@
       score,
     }
     addRun(historyRecord)
-    pushChat({ text: `You finished practicing ${definition.name}.`, kind: 'info' })
+    pushChat(chat, { text: `You finished practicing ${definition.name}.`, kind: 'info' })
     status = 'result'
   }
 
