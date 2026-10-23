@@ -1,13 +1,13 @@
 <script lang="ts">
   import { EngineSession, TickClock, judgeRun, inventoryState } from '../engine'
-  import type { MethodDefinition, RunLog, RunScore, Verdict, VerdictEvent } from '../engine'
+  import type { MethodDefinition, RunLog, RunScore, VerdictEvent } from '../engine'
   import { SvelteMap } from 'svelte/reactivity'
   import { addRun, createHistoryId } from './history'
   import type { HistoryRecord } from './history'
   import { Metronome } from './metronome'
-  import Scene from './Scene.svelte'
+  import ClientShell from './ClientShell.svelte'
 
-  const FLASH_MS = 250
+  const CLICK_MS = 250
 
   const RATE_PRESETS: Array<{ label: string; rate: number }> = [
     { label: '1x', rate: 1 },
@@ -17,6 +17,19 @@
   const RATE_SLIDER_MIN = 0.1
   const RATE_SLIDER_MAX = 1
   const RATE_SLIDER_STEP = 0.05
+
+  const CHAT_BUFFER_MAX = 50
+
+  interface ChatLine {
+    text: string
+    kind: 'info' | 'good' | 'bad'
+  }
+
+  const FLAVOR_PATTERNS: Array<{ pattern: RegExp; line: (label: string) => string }> = [
+    { pattern: /\bspot\b/, line: (label) => `You cast out at the ${label}.` },
+    { pattern: /\btrap\b/, line: (label) => `You tend the ${label}.` },
+    { pattern: /\brock\b/, line: (label) => `You swing your pick at the ${label}.` },
+  ]
 
   interface Props {
     definition: MethodDefinition
@@ -45,7 +58,8 @@
   )
   // svelte-ignore state_referenced_locally
   let lastRun = $state<RunLog | undefined>(resumeRun)
-  let flashes = $state<Record<string, Verdict | undefined>>({})
+  let chat = $state<ChatLine[]>([])
+  let clickedTargets = $state<Record<string, boolean>>({})
   // svelte-ignore state_referenced_locally
   let inventoryOccupied = $state(
     resumeRun !== undefined ? inventoryState(resumeRun, definition).occupied : 0,
@@ -57,7 +71,7 @@
   let unsubscribers: Array<() => void> = []
   let startedAt = 0
   let wastedMissedTick: number | undefined = undefined
-  const flashTimers = new SvelteMap<string, ReturnType<typeof setTimeout>>()
+  const clickedTimers = new SvelteMap<string, ReturnType<typeof setTimeout>>()
   const metronome = new Metronome()
 
   let metronomeOn = $state(metronome.enabled)
@@ -72,6 +86,38 @@
     inventoryOccupied = inventoryState(session.getLog(), definition).occupied
   }
 
+  function labelOf(targetId: string): string {
+    return definition.targets.find((target) => target.id === targetId)?.label ?? targetId
+  }
+
+  function flavorLineFor(label: string): string {
+    const lower = label.toLowerCase()
+    for (const flavor of FLAVOR_PATTERNS) {
+      if (flavor.pattern.test(lower)) return flavor.line(lower)
+    }
+    return `You interact with the ${lower}.`
+  }
+
+  function errorLineFor(event: VerdictEvent): string {
+    const label = labelOf(event.target).toLowerCase()
+    const tick = `(tick ${event.tick})`
+    switch (event.verdict) {
+      case 'missed':
+        return `Missed: ${label} ${tick}`
+      case 'wrong-tick':
+        return `Wrong tick: ${label} ${tick}`
+      case 'wrong-target':
+        return `Wrong target: ${label} ${tick}`
+      default:
+        return `Extra click ${tick}`
+    }
+  }
+
+  function pushChat(line: ChatLine): void {
+    chat.push(line)
+    if (chat.length > CHAT_BUFFER_MAX) chat.splice(0, chat.length - CHAT_BUFFER_MAX)
+  }
+
   function trackWasted(event: VerdictEvent): void {
     if (!isAnchored || primaryTarget === undefined || event.target !== primaryTarget) return
     if (event.verdict === 'missed') {
@@ -80,38 +126,31 @@
       return
     }
     if (wastedIndicator !== undefined && wastedIndicator.mode === 'live') {
-      wastedIndicator = { mode: 'final', count: wastedIndicator.count }
+      const count = wastedIndicator.count
+      wastedIndicator = { mode: 'final', count }
+      pushChat({
+        text: `Wasted ${count} tick${count === 1 ? '' : 's'}.`,
+        kind: 'bad',
+      })
     }
   }
 
-  function updateWastedCount(tick: number): void {
-    if (
-      wastedIndicator === undefined ||
-      wastedIndicator.mode !== 'live' ||
-      wastedMissedTick === undefined
-    ) {
-      return
-    }
-    const count = Math.min(Math.max(tick - wastedMissedTick, 0) + 1, definition.cycleLength)
-    wastedIndicator = { mode: 'live', count }
-  }
-
-  function showVerdictFlash(event: VerdictEvent): void {
-    const pending = flashTimers.get(event.target)
+  function markClicked(targetId: string): void {
+    const pending = clickedTimers.get(targetId)
     if (pending !== undefined) clearTimeout(pending)
-    flashes[event.target] = event.verdict
-    flashTimers.set(
-      event.target,
+    clickedTargets[targetId] = true
+    clickedTimers.set(
+      targetId,
       setTimeout(() => {
-        flashTimers.delete(event.target)
-        delete flashes[event.target]
-      }, FLASH_MS),
+        clickedTimers.delete(targetId)
+        delete clickedTargets[targetId]
+      }, CLICK_MS),
     )
   }
 
-  function clearFlashTimers(): void {
-    for (const timer of flashTimers.values()) clearTimeout(timer)
-    flashTimers.clear()
+  function clearClickedTimers(): void {
+    for (const timer of clickedTimers.values()) clearTimeout(timer)
+    clickedTimers.clear()
   }
 
   function onClockTick(tick: number): void {
@@ -146,7 +185,13 @@
   }
 
   function handleVerdict(event: VerdictEvent): void {
-    showVerdictFlash(event)
+    if (event.verdict === 'hit') {
+      if (isAnchored && event.target === primaryTarget) {
+        pushChat({ text: flavorLineFor(labelOf(event.target)), kind: 'good' })
+      }
+    } else {
+      pushChat({ text: errorLineFor(event), kind: 'bad' })
+    }
     trackWasted(event)
   }
 
@@ -160,8 +205,10 @@
       unsubscribers.push(clock.onTick(() => metronome.pulse()))
     }
     if (metronomeOn) metronome.ensure()
-    clearFlashTimers()
-    flashes = {}
+    clearClickedTimers()
+    clickedTargets = {}
+    chat = []
+    pushChat({ text: `You begin practicing ${definition.name}.`, kind: 'info' })
     score = undefined
     inventoryOccupied = 0
     wastedIndicator = undefined
@@ -196,8 +243,8 @@
   function stop(): void {
     if (session === undefined || (status !== 'running' && status !== 'paused')) return
     const log: RunLog = session.stop()
-    clearFlashTimers()
-    flashes = {}
+    clearClickedTimers()
+    clickedTargets = {}
     wastedIndicator = undefined
     wastedMissedTick = undefined
     lastRun = log
@@ -211,7 +258,20 @@
       score,
     }
     addRun(historyRecord)
+    pushChat({ text: `You finished practicing ${definition.name}.`, kind: 'info' })
     status = 'result'
+  }
+
+  function updateWastedCount(tick: number): void {
+    if (
+      wastedIndicator === undefined ||
+      wastedIndicator.mode !== 'live' ||
+      wastedMissedTick === undefined
+    ) {
+      return
+    }
+    const count = Math.min(Math.max(tick - wastedMissedTick, 0) + 1, definition.cycleLength)
+    wastedIndicator = { mode: 'live', count }
   }
 
   function review(): void {
@@ -228,10 +288,10 @@
   }
 
   function handleTargetClick(targetId: string): void {
-    if (canClickScene()) {
-      session?.input(targetId)
-      refreshInventory()
-    }
+    if (!canClickScene()) return
+    markClicked(targetId)
+    session?.input(targetId)
+    refreshInventory()
   }
 
   function handleRateInput(event: Event): void {
@@ -243,7 +303,7 @@
     return () => {
       for (const unsubscribe of unsubscribers) unsubscribe()
       unsubscribers = []
-      clearFlashTimers()
+      clearClickedTimers()
       session?.stop()
       session = undefined
       clock = undefined
@@ -259,68 +319,83 @@
 
   <p class="description">{definition.description}</p>
 
-  <div class="tick-counter" aria-label="Tick counter">
-    <span class="tick-number" class:paused={status === 'paused'}>{currentTick}</span>
-    <span class="cycle">cycle position {cyclePosition} of {definition.cycleLength}</span>
-    {#if status === 'paused'}
-      <span class="paused-badge">PAUSED</span>
-    {/if}
-  </div>
-
-  <Scene
-    {definition}
-    {flashes}
-    inventoryOccupied={inventoryOccupied}
-    wastedTicks={wastedIndicator}
-    disabled={!canClickScene()}
-    onTarget={handleTargetClick}
-  />
-
-  <div class="controls">
-    <button type="button" onclick={start} disabled={isLive()}>Start</button>
-    <button type="button" onclick={togglePause} disabled={!isLive()}>
-      {status === 'paused' ? 'Resume' : 'Pause'}
-    </button>
-    <button type="button" onclick={stepForward} disabled={!isLive()}>Step</button>
-    <button type="button" onclick={stop} disabled={!isLive()}>Stop</button>
-  </div>
-
-  <div class="tuning">
-    <div class="rate-controls" role="group" aria-label="Tick rate">
-      <span class="rate-label">Tick rate</span>
-      <div class="rate-presets">
-        {#each RATE_PRESETS as preset (preset.rate)}
-          <button
-            type="button"
-            class:preset-active={rate === preset.rate}
-            onclick={() => setRate(preset.rate)}
-          >
-            {preset.label}
-          </button>
-        {/each}
-      </div>
-      <input
-        type="range"
-        class="rate-slider"
-        min={RATE_SLIDER_MIN}
-        max={RATE_SLIDER_MAX}
-        step={RATE_SLIDER_STEP}
-        value={rate}
-        oninput={handleRateInput}
-        aria-label="Fine tick rate"
+  <div class="client-area">
+    <div class="client-frame">
+      <ClientShell
+        {definition}
+        {inventoryOccupied}
+        onTarget={handleTargetClick}
+        disabled={!canClickScene()}
+        chatMessages={chat}
+        {clickedTargets}
       />
-      <span class="rate-value">{formatRate(rate)}</span>
     </div>
 
-    <label class="metronome">
-      <input type="checkbox" checked={metronomeOn} onchange={toggleMetronome} />
-      Metronome
-    </label>
+    <aside class="hud" aria-label="Practice HUD">
+      <div class="tick-hud panel" aria-label="Tick counter">
+        <span class="hud-label">Ticks</span>
+        <span class="hud-number" class:paused={status === 'paused'}>{currentTick}</span>
+        <span class="hud-cycle">cycle {cyclePosition} of {definition.cycleLength}</span>
+        {#if status === 'paused'}
+          <span class="hud-badge">PAUSED</span>
+        {/if}
+      </div>
+      {#if wastedIndicator !== undefined}
+        <div class="wasted-hud panel" class:final={wastedIndicator.mode === 'final'} role="status">
+          wasted: {wastedIndicator.count}
+        </div>
+      {/if}
+    </aside>
+  </div>
+
+  <div class="controls-panel panel">
+    <div class="controls">
+      <button type="button" class="btn" onclick={start} disabled={isLive()}>Start</button>
+      <button type="button" class="btn" onclick={togglePause} disabled={!isLive()}>
+        {status === 'paused' ? 'Resume' : 'Pause'}
+      </button>
+      <button type="button" class="btn" onclick={stepForward} disabled={!isLive()}>Step</button>
+      <button type="button" class="btn" onclick={stop} disabled={!isLive()}>Stop</button>
+    </div>
+
+    <div class="tuning">
+      <div class="rate-controls" role="group" aria-label="Tick rate">
+        <span class="rate-label">Tick rate</span>
+        <div class="rate-presets">
+          {#each RATE_PRESETS as preset (preset.rate)}
+            <button
+              type="button"
+              class="btn"
+              class:preset-active={rate === preset.rate}
+              onclick={() => setRate(preset.rate)}
+            >
+              {preset.label}
+            </button>
+          {/each}
+        </div>
+        <input
+          type="range"
+          class="rate-slider"
+          min={RATE_SLIDER_MIN}
+          max={RATE_SLIDER_MAX}
+          step={RATE_SLIDER_STEP}
+          value={rate}
+          oninput={handleRateInput}
+          aria-label="Fine tick rate"
+        />
+        <span class="rate-value">{formatRate(rate)}</span>
+      </div>
+
+      <label class="metronome">
+        <input type="checkbox" checked={metronomeOn} onchange={toggleMetronome} />
+        Metronome
+      </label>
+    </div>
   </div>
 
   {#if status === 'result' && score !== undefined}
-    <section class="result">
-      <h2>Run result</h2>
+    <section class="result panel">
+      <h2 class="title">Run result</h2>
       <dl class="score">
         <div class="score-item">
           <dt>hits</dt>
@@ -347,8 +422,12 @@
           <dd>{score.wastedTicks}</dd>
         </div>
       </dl>
-      <button type="button" onclick={review} disabled={lastRun === undefined}>Review run</button>
-      <button type="button" onclick={start}>Restart</button>
+      <div class="result-actions">
+        <button type="button" class="btn" onclick={review} disabled={lastRun === undefined}>
+          Review run
+        </button>
+        <button type="button" class="btn" onclick={start}>Restart</button>
+      </div>
     </section>
   {/if}
 </section>
@@ -358,7 +437,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
   }
 
   .back-button {
@@ -383,38 +462,102 @@
     max-width: 640px;
   }
 
-  .tick-counter {
+  .client-area {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .client-frame {
+    flex: 1 1 340px;
+    min-width: 0;
+  }
+
+  .hud {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 172px;
+  }
+
+  .tick-hud {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
+    padding: 10px 12px;
   }
 
-  .tick-number {
-    font-size: 3.2rem;
+  .hud-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .hud-number {
+    color: var(--title);
+    font-size: 2.6rem;
     font-weight: 700;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
+    text-shadow: 1px 1px 0 var(--bg-deep);
   }
 
-  .tick-number.paused {
+  .hud-number.paused {
     color: var(--accent);
   }
 
-  .cycle {
+  .hud-cycle {
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
   }
 
-  .paused-badge {
-    padding: 2px 14px;
+  .hud-badge {
+    padding: 2px 12px;
     border-radius: 999px;
     background: var(--accent);
     color: var(--bg-deep);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.08em;
+  }
+
+  .wasted-hud {
+    padding: 8px 12px;
+    border-color: var(--error);
+    color: var(--error);
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    animation: wasted-pulse 600ms ease-in-out infinite alternate;
+  }
+
+  .wasted-hud.final {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  @keyframes wasted-pulse {
+    from {
+      opacity: 0.75;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .controls-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
   }
 
   .controls {
@@ -422,19 +565,9 @@
     gap: 12px;
   }
 
-  .controls button {
-    padding: 10px 24px;
-    font-size: 1rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text);
-    cursor: pointer;
-  }
-
-  .controls button:disabled {
-    opacity: 0.45;
-    cursor: default;
+  .controls .btn {
+    padding: 8px 20px;
+    font-size: 0.95rem;
   }
 
   .tuning {
@@ -460,17 +593,12 @@
     gap: 6px;
   }
 
-  .rate-controls button {
-    padding: 6px 14px;
-    font-size: 0.9rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text);
-    cursor: pointer;
+  .rate-presets .btn {
+    padding: 4px 12px;
+    font-size: 0.85rem;
   }
 
-  .rate-controls button.preset-active {
+  .rate-presets .btn.preset-active {
     border-color: var(--accent);
     color: var(--accent);
   }
@@ -510,9 +638,7 @@
     align-items: center;
     gap: 12px;
     padding: 16px 32px;
-    border: 1px solid var(--stone-dark);
-    border-radius: 8px;
-    background: var(--bg-deep);
+    max-width: min(720px, 100%);
   }
 
   .result h2 {
@@ -520,14 +646,14 @@
     font-size: 1.2rem;
   }
 
-  .result button {
+  .result-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .result .btn {
     padding: 8px 24px;
     font-size: 0.95rem;
-    border-radius: 6px;
-    border: 1px solid var(--stone-dark);
-    background: var(--stone);
-    color: var(--text);
-    cursor: pointer;
   }
 
   .score {
