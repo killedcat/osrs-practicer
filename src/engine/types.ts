@@ -6,6 +6,7 @@ export type CycleSemantics = 'metronomic' | 'anchored'
 export interface TargetSpec {
   id: TargetId
   label: string
+  inventory?: boolean
 }
 
 export interface ExpectedInput {

@@ -130,6 +130,21 @@ function groupByTick(inputs: Input[]): Map<Tick, Input[]> {
   return groups
 }
 
+export function freeInventoryTargets(definition: MethodDefinition): Set<TargetId> {
+  const referenced = new Set(definition.expectedInputs.map((e) => e.target))
+  const free = new Set<TargetId>()
+  for (const target of definition.targets) {
+    if (target.inventory === true && !referenced.has(target.id)) free.add(target.id)
+  }
+  return free
+}
+
+function judgeableInputs(log: RunLog, definition: MethodDefinition): Input[] {
+  const ignored = freeInventoryTargets(definition)
+  if (ignored.size === 0) return log.inputs
+  return log.inputs.filter((input) => !ignored.has(input.target))
+}
+
 function judgeMetronomic(
   log: RunLog,
   definition: MethodDefinition,
@@ -137,7 +152,7 @@ function judgeMetronomic(
   const length = Math.max(1, definition.cycleLength)
   const expecteds = definition.expectedInputs
   const allDue = allDueOf(expecteds)
-  const groups = groupByTick(log.inputs)
+  const groups = groupByTick(judgeableInputs(log, definition))
   const verdicts: VerdictEvent[] = []
 
   for (let t = 0; t < log.durationTicks; t++) {
@@ -155,7 +170,7 @@ function judgeAnchored(
 ): { verdicts: VerdictEvent[]; wastedTicks: number } {
   const length = Math.max(1, definition.cycleLength)
   const expecteds = definition.expectedInputs
-  const groups = groupByTick(log.inputs)
+  const groups = groupByTick(judgeableInputs(log, definition))
   const verdicts: VerdictEvent[] = []
   let wastedTicks = 0
 
