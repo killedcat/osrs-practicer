@@ -1,6 +1,11 @@
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import * as engine from './index'
 
-it('engine placeholder is a framework-free module', () => {
-  expect(Object.keys(engine)).toEqual([])
+describe('engine public API', () => {
+  it('re-exports the session, clock, and judge entry points', () => {
+    expect(engine.EngineSession).toBeTypeOf('function')
+    expect(engine.TickClock).toBeTypeOf('function')
+    expect(engine.judgeRun).toBeTypeOf('function')
+    expect(engine.simulate).toBeTypeOf('function')
+  })
 })
