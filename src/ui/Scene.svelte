@@ -9,6 +9,7 @@
     wastedTicks?: { mode: 'live' | 'final'; count: number }
     onTarget?: (targetId: string) => void
     disabled?: boolean
+    clickedTargets?: ReadonlySet<string>
   }
 
   let {
@@ -18,6 +19,7 @@
     wastedTicks,
     onTarget,
     disabled = false,
+    clickedTargets,
   }: Props = $props()
 
   const slotIndices = Array.from({ length: INVENTORY_CAPACITY }, (_, index) => index)
@@ -29,6 +31,10 @@
     const verdict = flashes[targetId]
     if (verdict === undefined) return 'flash-none'
     return verdict === 'hit' ? 'flash-hit' : 'flash-bad'
+  }
+
+  function isClicked(targetId: string): boolean {
+    return clickedTargets?.has(targetId) ?? false
   }
 </script>
 
@@ -45,6 +51,7 @@
       <button
         class="hotspot {flashClass(target.id)}"
         type="button"
+        class:clicked={isClicked(target.id)}
         onclick={() => onTarget?.(target.id)}
         {disabled}
       >
@@ -54,7 +61,11 @@
   </div>
 
   {#each inventoryTargets as target (target.id)}
-    <div class="inventory" aria-label="Inventory: {target.label}">
+    <div
+      class="inventory"
+      class:clicked={isClicked(target.id)}
+      aria-label="Inventory: {target.label}"
+    >
       <div class="inventory-grid">
         {#each slotIndices as index (index)}
           {#if index < inventoryOccupied}
@@ -138,6 +149,11 @@
     color: #ffe0dc;
   }
 
+  .hotspot.clicked {
+    outline: 2px solid #f0b429;
+    outline-offset: 2px;
+  }
+
   .wasted-banner {
     display: flex;
     align-items: baseline;
@@ -174,6 +190,15 @@
     to {
       opacity: 1;
     }
+  }
+
+  .inventory {
+    border-radius: 8px;
+  }
+
+  .inventory.clicked {
+    outline: 2px solid #f0b429;
+    outline-offset: 3px;
   }
 
   .inventory-grid {

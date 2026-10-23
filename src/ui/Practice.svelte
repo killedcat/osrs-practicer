@@ -19,9 +19,11 @@
   interface Props {
     definition: MethodDefinition
     onBack?: () => void
+    onReview?: (log: RunLog) => void
+    resumeRun?: RunLog
   }
 
-  let { definition, onBack }: Props = $props()
+  let { definition, onBack, onReview, resumeRun }: Props = $props()
 
   type Status = 'idle' | 'running' | 'paused' | 'result'
 
@@ -30,13 +32,22 @@
     count: number
   }
 
-  let status = $state<Status>('idle')
+  // svelte-ignore state_referenced_locally
+  let status = $state<Status>(resumeRun !== undefined ? 'result' : 'idle')
   let currentTick = $state(0)
   let cyclePosition = $state(0)
   let rate = $state(1)
-  let score = $state<RunScore | undefined>(undefined)
+  // svelte-ignore state_referenced_locally
+  let score = $state<RunScore | undefined>(
+    resumeRun !== undefined ? judgeRun(resumeRun, definition).score : undefined,
+  )
+  // svelte-ignore state_referenced_locally
+  let lastRun = $state<RunLog | undefined>(resumeRun)
   let flashes = $state<Record<string, Verdict | undefined>>({})
-  let inventoryOccupied = $state(0)
+  // svelte-ignore state_referenced_locally
+  let inventoryOccupied = $state(
+    resumeRun !== undefined ? inventoryState(resumeRun, definition).occupied : 0,
+  )
   let wastedIndicator = $state<WastedIndicator | undefined>(undefined)
 
   let session: EngineSession | undefined = undefined
@@ -185,8 +196,14 @@
     flashes = {}
     wastedIndicator = undefined
     wastedMissedTick = undefined
+    lastRun = log
     score = judgeRun(log, definition).score
     status = 'result'
+  }
+
+  function review(): void {
+    if (onReview === undefined || lastRun === undefined) return
+    onReview(lastRun)
   }
 
   function canClickScene(): boolean {
@@ -317,6 +334,7 @@
           <dd>{score.wastedTicks}</dd>
         </div>
       </dl>
+      <button type="button" onclick={review} disabled={lastRun === undefined}>Review run</button>
       <button type="button" onclick={start}>Restart</button>
     </section>
   {/if}
