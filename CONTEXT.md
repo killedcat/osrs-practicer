@@ -75,3 +75,19 @@ _Avoid_: playback, review mode
 **Scene**:
 The generic, data-driven play area: authored Target stand-ins plus an inventory container. Contains no per-method code.
 _Avoid_: game view, module scene
+
+**Client Shell**:
+The app's replica of the OSRS client frame: Viewport, Inventory Panel, and Chatbox. Practice controls and meta feedback live outside it in app chrome.
+_Avoid_: game frame, client window
+
+**Viewport**:
+The world region of the Client Shell where world Targets are placed at authored coordinates.
+_Avoid_: world view, canvas
+
+**Inventory Panel**:
+The 4x7 grid region of the Client Shell. Static Targets occupy authored slots; caught items fill remaining slots.
+_Avoid_: inventory, bag
+
+**Chatbox**:
+The in-client message log where live Verdict feedback reads as game chat.
+_Avoid_: log, console
