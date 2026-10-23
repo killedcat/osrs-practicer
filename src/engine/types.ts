@@ -6,8 +6,12 @@ export type CycleSemantics = 'metronomic' | 'anchored'
 export interface TargetSpec {
   id: TargetId
   label: string
-  inventory?: boolean
+  placement: TargetPlacement
 }
+
+export type TargetPlacement =
+  | { region: 'viewport'; x: number; y: number }
+  | { region: 'inventory'; slot?: number }
 
 export interface ExpectedInput {
   tickInCycle: number

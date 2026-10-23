@@ -1,4 +1,4 @@
-import type { MethodDefinition } from '../engine/types'
+import type { MethodDefinition, TargetPlacement, TargetSpec } from '../engine/types'
 
 export interface ValidationError {
   path: string
@@ -9,6 +9,49 @@ const nonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0
 
 const isInteger = (value: number): boolean => Number.isInteger(value)
+
+interface PlacementCheck {
+  path: string
+  valid: boolean
+  region?: TargetPlacement['region']
+  reason?: 'missing' | 'x' | 'y' | 'slot'
+}
+
+function checkPlacement(target: TargetSpec, index: number): PlacementCheck {
+  const path = `targets[${index}].placement`
+  const placement = target.placement as TargetPlacement | undefined
+  if (
+    placement === undefined ||
+    placement === null ||
+    typeof placement !== 'object' ||
+    (placement.region !== 'viewport' && placement.region !== 'inventory')
+  ) {
+    return { path, valid: false, reason: 'missing' }
+  }
+  if (placement.region === 'viewport') {
+    const inRange = (value: number): boolean =>
+      typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100
+    if (!inRange(placement.x)) {
+      return { path: `${path}.x`, valid: false, reason: 'x', region: 'viewport' }
+    }
+    if (!inRange(placement.y)) {
+      return { path: `${path}.y`, valid: false, reason: 'y', region: 'viewport' }
+    }
+    return { path, valid: true, region: 'viewport' }
+  }
+  const { slot } = placement
+  if (slot !== undefined && (!isInteger(slot) || slot < 0 || slot > 27)) {
+    return { path: `${path}.slot`, valid: false, reason: 'slot', region: 'inventory' }
+  }
+  return { path, valid: true, region: 'inventory' }
+}
+
+const placementMessages: Record<NonNullable<PlacementCheck['reason']>, string> = {
+  missing: 'every target must have a placement',
+  x: 'viewport placement x must be a number in [0, 100]',
+  y: 'viewport placement y must be a number in [0, 100]',
+  slot: 'inventory placement slot must be an integer in [0, 27]',
+}
 
 export function validateDefinition(def: MethodDefinition): ValidationError[] {
   const errors: ValidationError[] = []
@@ -39,6 +82,7 @@ export function validateDefinition(def: MethodDefinition): ValidationError[] {
   if (!Array.isArray(def.targets) || def.targets.length === 0) {
     errors.push({ path: 'targets', message: 'targets must be a non-empty array' })
   } else {
+    const placementResults: PlacementCheck[] = []
     def.targets.forEach((target, index) => {
       if (seenTargets.has(target.id)) {
         errors.push({
@@ -47,6 +91,55 @@ export function validateDefinition(def: MethodDefinition): ValidationError[] {
         })
       }
       seenTargets.add(target.id)
+      const placementCheck = checkPlacement(target, index)
+      placementResults.push(placementCheck)
+      if (!placementCheck.valid) {
+        errors.push({
+          path: placementCheck.path,
+          message: placementMessages[placementCheck.reason!],
+        })
+      }
+    })
+
+    const viewportCount = placementResults.filter((p) => p.region === 'viewport').length
+    if (viewportCount === 0) {
+      errors.push({
+        path: 'targets',
+        message: 'at least one viewport target is required',
+      })
+    }
+
+    const seenSlots = new Map<number, string>()
+    def.targets.forEach((target, index) => {
+      const placementCheck = placementResults[index]
+      if (placementCheck.region !== 'inventory') return
+      const { slot } = target.placement as TargetPlacement & { slot?: number }
+      if (slot === undefined) return
+      const existing = seenSlots.get(slot)
+      if (existing !== undefined) {
+        errors.push({
+          path: `targets[${index}].placement.slot`,
+          message: `static inventory slot ${slot} is occupied by both "${existing}" and "${target.id}"`,
+        })
+      } else {
+        seenSlots.set(slot, target.id)
+      }
+    })
+
+    const judgedTargets = Array.isArray(def.expectedInputs)
+      ? new Set(def.expectedInputs.map((expected) => expected.target))
+      : new Set<string>()
+    def.targets.forEach((target, index) => {
+      const placementCheck = placementResults[index]
+      if (placementCheck.region !== 'inventory') return
+      if (!judgedTargets.has(target.id)) return
+      const { slot } = target.placement as TargetPlacement & { slot?: number }
+      if (slot === undefined) {
+        errors.push({
+          path: `targets[${index}].placement`,
+          message: `inventory target "${target.id}" is judged by an expectedInput and must declare a static slot`,
+        })
+      }
     })
   }
 

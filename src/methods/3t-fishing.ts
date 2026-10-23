@@ -8,10 +8,10 @@ export const threeTickFishing: MethodDefinition = {
   cycleLength: 3,
   semantics: 'anchored',
   targets: [
-    { id: 'spot', label: 'Fishing spot' },
-    { id: 'herb', label: 'Clean guam' },
-    { id: 'tar', label: 'Swamp tar' },
-    { id: 'fish', label: 'Fish', inventory: true },
+    { id: 'spot', label: 'Fishing spot', placement: { region: 'viewport', x: 50, y: 42 } },
+    { id: 'herb', label: 'Clean guam', placement: { region: 'inventory', slot: 0 } },
+    { id: 'tar', label: 'Swamp tar', placement: { region: 'inventory', slot: 1 } },
+    { id: 'fish', label: 'Fish', placement: { region: 'inventory' } },
   ],
   expectedInputs: [
     { tickInCycle: 0, target: 'spot', primary: true },

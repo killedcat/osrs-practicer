@@ -1,6 +1,6 @@
 <script lang="ts">
   import { INVENTORY_CAPACITY } from '../engine'
-  import type { MethodDefinition, Verdict } from '../engine'
+  import type { MethodDefinition, TargetSpec, Verdict } from '../engine'
 
   interface Props {
     definition: MethodDefinition
@@ -24,8 +24,30 @@
 
   const slotIndices = Array.from({ length: INVENTORY_CAPACITY }, (_, index) => index)
 
-  const hotspotTargets = $derived(definition.targets.filter((target) => target.inventory !== true))
-  const inventoryTargets = $derived(definition.targets.filter((target) => target.inventory === true))
+  const hotspotTargets = $derived(
+    definition.targets.filter((target) => target.placement.region === 'viewport'),
+  )
+  const inventoryTargets = $derived(
+    definition.targets.filter((target) => target.placement.region === 'inventory'),
+  )
+  const staticSlots = $derived(
+    new Set(
+      definition.targets.flatMap((target) => {
+        const placement = target.placement
+        if (placement.region === 'inventory' && placement.slot !== undefined) return [placement.slot]
+        return []
+      }),
+    ),
+  )
+  const freeSlotIndices = $derived(slotIndices.filter((index) => !staticSlots.has(index)))
+
+  function isFilled(target: TargetSpec, index: number): boolean {
+    const placement = target.placement
+    if (placement.region !== 'inventory') return false
+    if (placement.slot !== undefined) return index === placement.slot
+    const fill = Math.min(inventoryOccupied, freeSlotIndices.length)
+    return freeSlotIndices.slice(0, fill).includes(index)
+  }
 
   function flashClass(targetId: string): string {
     const verdict = flashes[targetId]
@@ -68,7 +90,7 @@
     >
       <div class="inventory-grid">
         {#each slotIndices as index (index)}
-          {#if index < inventoryOccupied}
+          {#if isFilled(target, index)}
             <button
               class="slot filled"
               type="button"

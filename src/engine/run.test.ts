@@ -10,8 +10,8 @@ const chinMethod: MethodDefinition = {
   cycleLength: 1,
   semantics: 'metronomic',
   targets: [
-    { id: 'chin', label: 'Red chinchompa' },
-    { id: 'net', label: 'Small fishing net' },
+    { id: 'chin', label: 'Red chinchompa', placement: { region: 'viewport', x: 50, y: 50 } },
+    { id: 'net', label: 'Small fishing net', placement: { region: 'viewport', x: 70, y: 60 } },
   ],
   expectedInputs: [{ tickInCycle: 0, target: 'chin' }],
 }
@@ -23,8 +23,8 @@ const dblMethod: MethodDefinition = {
   cycleLength: 2,
   semantics: 'metronomic',
   targets: [
-    { id: 'a', label: 'Action A' },
-    { id: 'b', label: 'Action B' },
+    { id: 'a', label: 'Action A', placement: { region: 'viewport', x: 40, y: 50 } },
+    { id: 'b', label: 'Action B', placement: { region: 'viewport', x: 60, y: 50 } },
   ],
   expectedInputs: [
     { tickInCycle: 0, target: 'a' },
@@ -39,10 +39,10 @@ const fishingMethod: MethodDefinition = {
   cycleLength: 3,
   semantics: 'anchored',
   targets: [
-    { id: 'spot', label: 'Fishing spot' },
-    { id: 'herb', label: 'Guam tar' },
-    { id: 'tar', label: 'Swamp tar' },
-    { id: 'net', label: 'Small fishing net' },
+    { id: 'spot', label: 'Fishing spot', placement: { region: 'viewport', x: 50, y: 42 } },
+    { id: 'herb', label: 'Guam tar', placement: { region: 'viewport', x: 60, y: 60 } },
+    { id: 'tar', label: 'Swamp tar', placement: { region: 'viewport', x: 70, y: 60 } },
+    { id: 'net', label: 'Small fishing net', placement: { region: 'viewport', x: 80, y: 65 } },
   ],
   expectedInputs: [
     { tickInCycle: 0, target: 'spot', primary: true },

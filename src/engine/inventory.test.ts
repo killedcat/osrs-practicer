@@ -10,9 +10,9 @@ const fishingBase: MethodDefinition = {
   cycleLength: 3,
   semantics: 'anchored',
   targets: [
-    { id: 'spot', label: 'Fishing spot' },
-    { id: 'herb', label: 'Guam tar' },
-    { id: 'tar', label: 'Swamp tar' },
+    { id: 'spot', label: 'Fishing spot', placement: { region: 'viewport', x: 50, y: 42 } },
+    { id: 'herb', label: 'Guam tar', placement: { region: 'inventory', slot: 0 } },
+    { id: 'tar', label: 'Swamp tar', placement: { region: 'inventory', slot: 1 } },
   ],
   expectedInputs: [
     { tickInCycle: 0, target: 'spot', primary: true },
@@ -25,8 +25,8 @@ const fishingWithInventory: MethodDefinition = {
   ...fishingBase,
   targets: [
     ...fishingBase.targets,
-    { id: 'trout', label: 'Raw trout', inventory: true },
-    { id: 'leather', label: 'Cowhide', inventory: true },
+    { id: 'trout', label: 'Raw trout', placement: { region: 'inventory' } },
+    { id: 'leather', label: 'Cowhide', placement: { region: 'inventory' } },
   ],
 }
 
@@ -37,9 +37,9 @@ const chinWithInventory: MethodDefinition = {
   cycleLength: 1,
   semantics: 'metronomic',
   targets: [
-    { id: 'chin', label: 'Red chinchompa' },
-    { id: 'net', label: 'Small fishing net' },
-    { id: 'fishtail', label: 'Fish tail', inventory: true },
+    { id: 'chin', label: 'Red chinchompa', placement: { region: 'viewport', x: 50, y: 50 } },
+    { id: 'net', label: 'Small fishing net', placement: { region: 'viewport', x: 70, y: 60 } },
+    { id: 'fishtail', label: 'Fish tail', placement: { region: 'inventory' } },
   ],
   expectedInputs: [{ tickInCycle: 0, target: 'chin' }],
 }
@@ -51,8 +51,8 @@ const dropMethod: MethodDefinition = {
   cycleLength: 1,
   semantics: 'metronomic',
   targets: [
-    { id: 'chin', label: 'Red chinchompa', inventory: true },
-    { id: 'net', label: 'Small fishing net' },
+    { id: 'chin', label: 'Red chinchompa', placement: { region: 'inventory', slot: 0 } },
+    { id: 'net', label: 'Small fishing net', placement: { region: 'viewport', x: 50, y: 50 } },
   ],
   expectedInputs: [{ tickInCycle: 0, target: 'chin' }],
 }
@@ -64,8 +64,8 @@ const shatterMethod: MethodDefinition = {
   cycleLength: 1,
   semantics: 'anchored',
   targets: [
-    { id: 'anvil', label: 'Anvil' },
-    { id: 'ore', label: 'Raw ore', inventory: true },
+    { id: 'anvil', label: 'Anvil', placement: { region: 'viewport', x: 50, y: 45 } },
+    { id: 'ore', label: 'Raw ore', placement: { region: 'inventory' } },
   ],
   expectedInputs: [{ tickInCycle: 0, target: 'anvil', primary: true }],
 }

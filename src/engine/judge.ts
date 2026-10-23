@@ -134,7 +134,7 @@ export function freeInventoryTargets(definition: MethodDefinition): Set<TargetId
   const referenced = new Set(definition.expectedInputs.map((e) => e.target))
   const free = new Set<TargetId>()
   for (const target of definition.targets) {
-    if (target.inventory === true && !referenced.has(target.id)) free.add(target.id)
+    if (target.placement.region === 'inventory' && !referenced.has(target.id)) free.add(target.id)
   }
   return free
 }

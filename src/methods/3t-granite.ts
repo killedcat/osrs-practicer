@@ -8,8 +8,8 @@ export const threeTickGranite: MethodDefinition = {
   cycleLength: 3,
   semantics: 'anchored',
   targets: [
-    { id: 'rock', label: 'Granite rock' },
-    { id: 'granite', label: 'Granite', inventory: true },
+    { id: 'rock', label: 'Granite rock', placement: { region: 'viewport', x: 50, y: 45 } },
+    { id: 'granite', label: 'Granite', placement: { region: 'inventory' } },
   ],
   expectedInputs: [{ tickInCycle: 0, target: 'rock', primary: true }],
 }

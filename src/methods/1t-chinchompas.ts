@@ -7,6 +7,6 @@ export const oneTickChinchompas: MethodDefinition = {
     'Aim for one box-trap action every game tick at full speed — an input 0.6 seconds apart, every tick, forever.',
   cycleLength: 1,
   semantics: 'metronomic',
-  targets: [{ id: 'trap', label: 'Box trap' }],
+  targets: [{ id: 'trap', label: 'Box trap', placement: { region: 'viewport', x: 50, y: 50 } }],
   expectedInputs: [{ tickInCycle: 0, target: 'trap', primary: false }],
 }

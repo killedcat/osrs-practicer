@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { MethodDefinition } from '../engine/types'
+import type { MethodDefinition, TargetSpec } from '../engine/types'
 import { assertValidDefinition, validateDefinition } from './validate'
 import type { ValidationError } from './validate'
 
@@ -9,7 +9,7 @@ const metronomic: MethodDefinition = {
   description: 'Throw a chinchompa every tick.',
   cycleLength: 1,
   semantics: 'metronomic',
-  targets: [{ id: 'trap', label: 'Box trap' }],
+  targets: [{ id: 'trap', label: 'Box trap', placement: { region: 'viewport', x: 50, y: 50 } }],
   expectedInputs: [{ tickInCycle: 0, target: 'trap', primary: false }],
 }
 
@@ -20,8 +20,8 @@ const anchored: MethodDefinition = {
   cycleLength: 2,
   semantics: 'anchored',
   targets: [
-    { id: 'spot', label: 'Fishing spot' },
-    { id: 'guam-tar', label: 'Guam tar' },
+    { id: 'spot', label: 'Fishing spot', placement: { region: 'viewport', x: 50, y: 42 } },
+    { id: 'guam-tar', label: 'Guam tar', placement: { region: 'inventory', slot: 0 } },
   ],
   expectedInputs: [
     { tickInCycle: 0, target: 'spot', primary: true },
@@ -33,6 +33,9 @@ const overridden = (over: Partial<MethodDefinition>): MethodDefinition => ({
   ...metronomic,
   ...over,
 })
+
+const targetWith = (placement: unknown): TargetSpec =>
+  ({ id: 'trap', label: 'Trap', placement }) as unknown as TargetSpec
 
 const expectError = (def: MethodDefinition, path: string): void => {
   const errors = validateDefinition(def)
@@ -72,8 +75,8 @@ describe('validateDefinition', () => {
     expectError(
       overridden({
         targets: [
-          { id: 'trap', label: 'A' },
-          { id: 'trap', label: 'B' },
+          { id: 'trap', label: 'A', placement: { region: 'viewport', x: 40, y: 50 } },
+          { id: 'trap', label: 'B', placement: { region: 'viewport', x: 60, y: 50 } },
         ],
       }),
       'targets[1].id',
@@ -130,8 +133,8 @@ describe('validateDefinition', () => {
       validateDefinition(
         overridden({
           targets: [
-            { id: 'trap', label: 'Box trap' },
-            { id: 'net', label: 'Net' },
+            { id: 'trap', label: 'Box trap', placement: { region: 'viewport', x: 40, y: 50 } },
+            { id: 'net', label: 'Net', placement: { region: 'viewport', x: 60, y: 50 } },
           ],
           cycleLength: 2,
           expectedInputs: [
@@ -184,8 +187,8 @@ describe('validateDefinition', () => {
         cycleLength: 3,
         semantics: 'anchored',
         targets: [
-          { id: 'trap', label: 'Box trap' },
-          { id: 'net', label: 'Net' },
+          { id: 'trap', label: 'Box trap', placement: { region: 'viewport', x: 40, y: 50 } },
+          { id: 'net', label: 'Net', placement: { region: 'viewport', x: 60, y: 50 } },
         ],
         expectedInputs: [
           { tickInCycle: 0, target: 'trap' },
@@ -206,6 +209,110 @@ describe('validateDefinition', () => {
     })
     const paths = errors.map((error) => error.path)
     expect(paths).toEqual(['id', 'name', 'targets', 'expectedInputs', 'expectedInputs'])
+  })
+})
+
+describe('placement validation', () => {
+  const withTargets = (targets: unknown[]): MethodDefinition =>
+    overridden({ targets: targets as TargetSpec[] })
+
+  it('rejects a target with no placement', () => {
+    expectError(
+      withTargets([targetWith(undefined)]),
+      'targets[0].placement',
+    )
+    const errors = validateDefinition(withTargets([targetWith(undefined)]))
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        path: 'targets[0].placement',
+        message: 'every target must have a placement',
+      }),
+    )
+  })
+
+  it('rejects viewport x outside [0, 100]', () => {
+    for (const x of [-1, 100.5, 101, '50' as unknown as number]) {
+      expectError(withTargets([targetWith({ region: 'viewport', x, y: 50 })]), 'targets[0].placement.x')
+    }
+  })
+
+  it('rejects viewport y outside [0, 100]', () => {
+    for (const y of [-1, 100.5, 101, '42' as unknown as number]) {
+      expectError(withTargets([targetWith({ region: 'viewport', x: 50, y })]), 'targets[0].placement.y')
+    }
+  })
+
+  it('rejects inventory slots outside [0, 27] or non-integer', () => {
+    for (const slot of [-1, 28, 0.5]) {
+      expectError(
+        withTargets([targetWith({ region: 'inventory', slot })]),
+        'targets[0].placement.slot',
+      )
+    }
+  })
+
+  it('rejects duplicate static inventory slots', () => {
+    const errors = validateDefinition(
+      withTargets([
+        targetWith({ region: 'viewport', x: 50, y: 50 }),
+        targetWith({ region: 'inventory', slot: 3 }),
+        targetWith({ region: 'inventory', slot: 3 }),
+      ]),
+    )
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        path: 'targets[2].placement.slot',
+        message: 'static inventory slot 3 is occupied by both "trap" and "trap"',
+      }),
+    )
+  })
+
+  it('requires at least one viewport target', () => {
+    expectError(
+      withTargets([targetWith({ region: 'inventory', slot: 0 })]),
+      'targets',
+    )
+    const errors = validateDefinition(withTargets([targetWith({ region: 'inventory', slot: 0 })]))
+    expect(errors).toContainEqual(
+      expect.objectContaining({ path: 'targets', message: 'at least one viewport target is required' }),
+    )
+  })
+
+  it('rejects an inventory target judged by an expectedInput without a static slot', () => {
+    const errors = validateDefinition(
+      withTargets([
+        targetWith({ region: 'viewport', x: 50, y: 50 }),
+        targetWith({ region: 'inventory' }),
+      ]),
+    )
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        path: 'targets[1].placement',
+        message: 'inventory target "trap" is judged by an expectedInput and must declare a static slot',
+      }),
+    )
+  })
+
+  it('accepts an unreferenced dynamic inventory target and distinct static slots', () => {
+    const errors = validateDefinition(
+      withTargets([
+        { id: 'trap', label: 'Trap', placement: { region: 'viewport', x: 50, y: 50 } },
+        { id: 'herb', label: 'Herb', placement: { region: 'inventory', slot: 0 } },
+        { id: 'fish', label: 'Fish', placement: { region: 'inventory' } },
+      ]),
+    )
+    expect(errors).toEqual([])
+  })
+
+  it('accepts a judged inventory target with a static slot', () => {
+    expect(
+      validateDefinition(
+        withTargets([
+          { id: 'trap', label: 'Trap', placement: { region: 'viewport', x: 50, y: 50 } },
+          { id: 'herb', label: 'Herb', placement: { region: 'inventory', slot: 4 } },
+        ]),
+      ),
+    ).toEqual([])
   })
 })
 
